@@ -1,12 +1,13 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import Http404
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from . import services, tvmaze
+from .forms import TrackingForm
 from .models import CollectionEntry, Show
 
 
@@ -112,6 +113,11 @@ def show_detail(request, tvmaze_id):
         except tvmaze.TVmazeError as error:
             extras_error = str(error)
 
+    return render(request, "shows/show_detail.html",
+                  _detail_context(request, show, entry, tab, tabs, extras=extras, extras_error=extras_error))
+
+
+def _detail_context(request, show, entry, tab, tabs, extras=None, extras_error="", form=None):
     context = {
         "show": show,
         "entry": entry,
@@ -120,15 +126,52 @@ def show_detail(request, tvmaze_id):
         "extras": extras,
         "extras_error": extras_error,
     }
+    if tab == "tracking":
+        context["form"] = form or TrackingForm(instance=entry)
     if tab == "suggested":
-        suggestions = services.suggested_shows(tvmaze_id, _value(show, "genres"))
+        suggestions = services.suggested_shows(_value(show, "tvmaze_id"), _value(show, "genres"))
         saved = saved_entries_by_tvmaze_id(request.user, [s.tvmaze_id for s in suggestions])
         context["suggestions"] = [{"show": s, "entry": saved.get(s.tvmaze_id)} for s in suggestions]
-    return render(request, "shows/show_detail.html", context)
+    return context
 
 
 def _value(show, name):
     return show.get(name) if isinstance(show, dict) else getattr(show, name)
+
+
+def _tracking_url(entry):
+    return f"{reverse('shows:detail', args=[entry.show.tvmaze_id])}?tab=tracking"
+
+
+@login_required
+def update_entry(request, entry_id):
+    """Save the My Tracking form. Only the owner's entries can be found (others get 404)."""
+    entry = get_object_or_404(CollectionEntry.objects.select_related("show"), pk=entry_id, user=request.user)
+    if request.method != "POST":
+        return redirect(_tracking_url(entry))
+    form = TrackingForm(request.POST, instance=entry)
+    if form.is_valid():
+        form.save()
+        messages.success(request, f"Saved your tracking for {entry.show.name}.")
+        return redirect(_tracking_url(entry))
+    # Re-render the page with the errors and the user's input. The page header uses a fresh
+    # copy of the entry, because an invalid form has already changed `entry` in memory.
+    saved_entry = CollectionEntry.objects.select_related("show").get(pk=entry.pk)
+    context = _detail_context(request, saved_entry.show, saved_entry, "tracking",
+                              ["tracking", "suggested", "extras"], form=form)
+    return render(request, "shows/show_detail.html", context, status=400)
+
+
+@login_required
+def delete_entry(request, entry_id):
+    """GET shows a confirmation page; POST removes the entry (the shared Show row stays)."""
+    entry = get_object_or_404(CollectionEntry.objects.select_related("show"), pk=entry_id, user=request.user)
+    if request.method == "POST":
+        name = entry.show.name
+        entry.delete()
+        messages.success(request, f"Removed {name} from your collection.")
+        return redirect("shows:collection")
+    return render(request, "shows/confirm_delete.html", {"entry": entry, "show": entry.show})
 
 
 @login_required

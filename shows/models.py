@@ -1,7 +1,11 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Q
+from django.db.models.functions import Length
+from django.db.models.lookups import LessThanOrEqual
 
-NOTES_MAX_LENGTH = 2000
+from .validation import NOTES_MAX_LENGTH, RATING_MAX, RATING_MIN, STATUS_VALUES, validate_tracking
 
 
 class Show(models.Model):
@@ -53,6 +57,8 @@ class CollectionEntry(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="collection_entries")
     show = models.ForeignKey(Show, on_delete=models.PROTECT, related_name="collection_entries")
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PLAN_TO_WATCH)
+    # Range rules (season/episode >= 1, rating 1-5) live in shows.validation and the check
+    # constraints below, so they are defined once instead of also as field validators.
     current_season = models.PositiveIntegerField(null=True, blank=True)
     current_episode = models.PositiveIntegerField(null=True, blank=True)
     rating = models.PositiveSmallIntegerField(null=True, blank=True)
@@ -65,10 +71,31 @@ class CollectionEntry(models.Model):
         ordering = ["-updated_at"]
         constraints = [
             models.UniqueConstraint(fields=["user", "show"], name="unique_show_per_user"),
+            # The same rules as shows.validation.validate_tracking, enforced by the database.
+            # The explicit isnull=False matters: SQL treats "NULL >= 1" as unknown, and a CHECK
+            # whose result is unknown passes, which would let "season only" rows in.
+            models.CheckConstraint(
+                condition=Q(current_season__isnull=True, current_episode__isnull=True)
+                | Q(current_season__isnull=False, current_episode__isnull=False,
+                    current_season__gte=1, current_episode__gte=1),
+                name="progress_both_or_neither",
+            ),
+            models.CheckConstraint(
+                condition=Q(rating__isnull=True) | Q(rating__gte=RATING_MIN, rating__lte=RATING_MAX),
+                name="rating_1_to_5",
+            ),
+            models.CheckConstraint(condition=Q(status__in=STATUS_VALUES), name="status_valid"),
+            models.CheckConstraint(condition=LessThanOrEqual(Length("notes"), NOTES_MAX_LENGTH), name="notes_max_2000"),
         ]
 
     def __str__(self):
         return f"{self.user} · {self.show}"
+
+    def clean(self):
+        """Apply the shared tracking rules (used by the web form and the admin)."""
+        errors = validate_tracking(self.status, self.current_season, self.current_episode, self.rating, self.notes)
+        if errors:
+            raise ValidationError(errors)
 
     @property
     def has_progress(self):

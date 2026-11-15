@@ -68,6 +68,17 @@ Sections:
 - **How found:** the shared failure test cases, run against the Extras tab (`1 failed, 200 passed`).
 - **Fix:** `get_extras` now requires a show object with an `id`, and otherwise raises the same "couldn't read" error as other calls. Result: `201 passed`.
 
+### B10 — Database rule let "season only" rows in (2026-11-15, Phase 6, caught by a test written first)
+- **Before:** the first version of the progress check constraint was `(season IS NULL AND episode IS NULL) OR (season >= 1 AND episode >= 1)`. The TDD test `test_database_constraints_block_invalid_rows_that_skip_validation` failed for `{season: 2, episode: NULL}` and `{season: NULL, episode: 2}`: `2 failed, 239 passed`.
+- **Why:** in SQL, `NULL >= 1` is *unknown*, so the condition became `FALSE OR UNKNOWN` = unknown, and a CHECK constraint **passes** when its result is unknown.
+- **Fix:** the "started" branch now also requires `season IS NOT NULL AND episode IS NOT NULL`. The migration was regenerated before it was ever applied. Result: `241 passed`.
+
+### B11 — The same error message appeared twice (2026-11-15, Phase 6)
+- **Before:** posting Season `0` or Rating `9` showed "Season must be a whole number of 1 or more." twice. The new test `test_each_error_message_appears_once` failed (`2 failed, 267 passed`).
+- **Wrong first guess:** I assumed the form field and the model were both reporting it, and added a filter for that case. The test still failed. Inspecting `form.errors.as_data()` showed the field accepted `0`. Both copies came from the model stage: a `MinValueValidator(1)` on the field *and* the shared `validate_tracking` rule.
+- **Fix:** removed the duplicate range validators from the model fields, so the shared rules (plus the database constraints) are the single source. The filter is kept for a related case: a rejected Season no longer also triggers a misleading "enter both" error on Episode (`test_rejected_season_does_not_also_claim_episode_is_missing`). Result: `270 passed`.
+- **Lesson:** inspect the actual data before fixing; my first fix addressed a cause that wasn't there.
+
 ---
 
 ## 2. Requests and responses
@@ -111,6 +122,10 @@ All taken with headless Microsoft Edge from `prototypes/` during the 2026-11-15 
 | `evidence/app-p5-suggested-empty.png` | Severance Suggested: honest label, empty state (no other matching shows saved yet) |
 | `evidence/app-p5-summary-spacing-before-fix.png` | Unsaved The Office: "The Office , a" (B8 before) |
 | `evidence/app-p5-unsaved-show-after-fix.png` | Unsaved The Office, live and not saved: fixed summary (B8 after) |
+| `evidence/app-p6-tracking-error.png` | Tracking: season without episode rejected, input kept, header unchanged |
+| `evidence/app-p6-tracking-saved.png` | Tracking saved: Watching · Season 2, Episode 3, 4 of 5, notes |
+| `evidence/app-p6-delete-confirm.png` | Remove confirmation page |
+| `evidence/app-p6-tracking-phone.png` | Tracking panels stacked at phone width |
 
 ---
 
@@ -177,3 +192,12 @@ Source: each package's official PyPI metadata (`https://pypi.org/pypi/<package>/
   - The unsaved *The Office* (526) displayed from live TVmaze, with **Add to my collection**. The `Show` count stayed at 3 afterwards, so viewing didn't save it.
   - `/shows/999999999/` → 404.
 - **AC21 (manual):** the details layout matches the approved prototype: metadata on the left, summary on the right at 1440 px, stacked at 390 px, and the poster fallback (see B7).
+
+### V8 — Tracking and delete (2026-11-15, Phase 6)
+- **TDD:** `shows/tests/test_validation.py` was written before `shows/validation.py` existed (collection error → red), then the shared rules were implemented (green), and the tests then caught B10.
+- `uv run pytest -q` → `270 passed`.
+- **Browser (demo_user, Severance):**
+  - Season 2 with a blank Episode → "Enter both a season and an episode, or leave both blank." (HTTP 400), input kept;
+  - then Episode 3 and 4 stars → "Saved your tracking for Severance.", header "Watching · Season 2, Episode 3";
+  - Remove → confirmation page; nothing deleted on GET.
+- While scripting the browser check, clicking the hidden radio input itself failed (the 1 px inputs were stacked on top of each other). Real users click the star labels. The inputs are now anchored inside the star group with `pointer-events: none`.

@@ -9,4 +9,6 @@ urlpatterns = [
     path("shows/<int:tvmaze_id>/", views.show_detail, name="detail"),
     path("collection/", views.collection, name="collection"),
     path("collection/add/", views.add_to_collection, name="add"),
+    path("collection/<int:entry_id>/", views.update_entry, name="update"),
+    path("collection/<int:entry_id>/delete/", views.delete_entry, name="delete"),
 ]

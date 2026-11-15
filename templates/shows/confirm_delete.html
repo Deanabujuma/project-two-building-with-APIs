@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Remove {{ show.name }} · HTTP.tv{% endblock %}
+{% block content %}
+<div class="confirm-wrap">
+  {% if show.background_url %}<div class="hero-bg" style="background-image:url('{{ show.background_url }}');filter:blur(18px) brightness(.35);transform:scale(1.08)"></div>{% endif %}
+  <div class="confirm-card" data-state="confirm-delete">
+    <div class="label-caps">Remove from collection</div>
+    <h1 class="h3 fw-bold mb-3">Remove {{ show.name }}?</h1>
+    <p class="muted">This deletes your status ({{ entry.get_status_display }}), progress ({{ entry.progress_text }}), rating and notes for this show. The show itself stays on HTTP.tv for other users.</p>
+    <form method="post" class="d-flex flex-wrap gap-3 mt-4">
+      {% csrf_token %}
+      <button class="btn-pill btn-danger-pill" type="submit"><i class="bi bi-trash3"></i>Remove</button>
+      <a class="btn-pill btn-ghost" href="{% url 'shows:detail' show.tvmaze_id %}?tab=tracking">Cancel</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

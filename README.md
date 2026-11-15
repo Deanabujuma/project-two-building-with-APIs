@@ -162,3 +162,18 @@ HTTP.tv's database. Any other show is fetched live from TVmaze and **not** saved
 | `tracking` (My Tracking) | the show is in your collection (default) | your status, progress, rating and notes |
 | `suggested` (Suggested) | always (default for unsaved shows) | other saved shows sharing at least one genre, ranked by shared genres then name; a local match, not a TVmaze recommendation |
 | `extras` (Extras) | always | seasons and up to 8 cast members, fetched from TVmaze only when this tab is opened |
+
+### Tracking a show
+
+On a saved show's **My Tracking** tab you can set the status, season and episode, a 1–5 star
+rating and notes. The form POSTs to `/collection/<id>/`. The same rules apply everywhere: in this
+form, the admin, the API, and as database check constraints:
+
+- the status must be one of the five choices; it never changes automatically;
+- season and episode: **both** blank (not started) or **both** whole numbers of 1 or more;
+- rating: blank or 1–5;
+- notes: at most 2,000 characters.
+
+Invalid input is shown again with a message under the field, and nothing is saved. **Remove**
+opens a confirmation page (`/collection/<id>/delete/`); confirming deletes only your tracking,
+and the show stays on HTTP.tv for other users. Another user's entry URLs return 404.

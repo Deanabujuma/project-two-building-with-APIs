@@ -1,8 +1,61 @@
-<div class="track-panel" data-panel="tracking">
+{# My Tracking: three panels in one form. Works without JavaScript; the script below only adds live labels. #}
+<form class="track-panel form-dark" method="post" action="{% url 'shows:update' entry.pk %}" novalidate data-panel="tracking">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<ul class="errorlist mb-3">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
   <div class="track-grid">
-    <section class="tpanel"><div class="label-caps">Status &amp; progress</div><div class="fs-5 fw-bold"><span class="sdot st-{{ entry.status }} me-2"></span>{{ entry.get_status_display }}</div><div class="muted">{{ entry.progress_text }}</div></section>
-    <section class="tpanel"><div class="label-caps">My rating</div><div class="rating-text">{% if entry.rating %}{{ entry.rating }} <small>of 5</small>{% else %}<small>Not rated</small>{% endif %}</div></section>
-    <section class="tpanel tpanel-notes"><div class="label-caps">Notes</div><p class="muted mb-0">{{ entry.notes|default:"No notes yet." }}</p></section>
+    <section class="tpanel" aria-labelledby="h-progress">
+      <div class="label-caps" id="h-progress">Status &amp; progress</div>
+      <label class="form-label" for="{{ form.status.id_for_label }}">Status</label>
+      {{ form.status }}{{ form.status.errors }}
+      <div class="row g-3 mt-1">
+        <div class="col-6"><label class="form-label" for="{{ form.current_season.id_for_label }}">Season</label>{{ form.current_season }}{{ form.current_season.errors }}</div>
+        <div class="col-6"><label class="form-label" for="{{ form.current_episode.id_for_label }}">Episode</label>{{ form.current_episode }}{{ form.current_episode.errors }}</div>
+      </div>
+      <div class="dim mt-2" style="font-size:.75rem">Last episode you watched. Leave both blank if you haven't started.</div>
+    </section>
+
+    <section class="tpanel" aria-labelledby="h-rating">
+      <div class="label-caps" id="h-rating">My rating</div>
+      {% with current=form.rating.value|default_if_none:""|stringformat:"s" %}
+      <fieldset class="star-radio" aria-labelledby="h-rating">
+        <legend class="visually-hidden">My rating, 1 to 5 stars</legend>
+        {% for n in "54321" %}
+          <input type="radio" name="rating" id="rating-{{ n }}" value="{{ n }}" {% if current == n %}checked{% endif %}>
+          <label for="rating-{{ n }}" title="{{ n }} star{% if n != "1" %}s{% endif %}"><span class="visually-hidden">{{ n }} star{% if n != "1" %}s{% endif %}</span>★</label>
+        {% endfor %}
+      </fieldset>
+      <div class="rating-text" id="rating-text">{% if current %}{{ current }} <small>of 5</small>{% else %}<small>Not rated</small>{% endif %}</div>
+      <div class="mt-auto pt-3 form-check">
+        <input class="form-check-input" type="radio" name="rating" id="rating-none" value="" {% if not current %}checked{% endif %}>
+        <label class="form-check-label dim small" for="rating-none">No rating</label>
+      </div>
+      {% endwith %}
+      {{ form.rating.errors }}
+    </section>
+
+    <section class="tpanel tpanel-notes" aria-labelledby="h-notes">
+      <div class="d-flex justify-content-between align-items-baseline">
+        <label class="label-caps" id="h-notes" for="{{ form.notes.id_for_label }}">Notes</label>
+        <span class="dim" style="font-size:.75rem" id="notes-count">{{ form.notes.value|default:""|length }} / 2,000</span>
+      </div>
+      {{ form.notes }}{{ form.notes.errors }}
+    </section>
   </div>
-  <div class="track-actions"><span class="dim small">Saved {{ entry.created_at|date:"M j, Y" }} · last updated {{ entry.updated_at|date:"M j, Y" }}</span></div>
-</div>
+  <div class="track-actions">
+    <button class="btn-pill btn-white" type="submit"><i class="bi bi-check-lg"></i>Save tracking</button>
+    <a class="btn-pill btn-ghost btn-remove" href="{% url 'shows:delete' entry.pk %}"><i class="bi bi-trash3"></i>Remove</a>
+    <span class="dim small ms-lg-auto">Saved {{ entry.created_at|date:"M j, Y" }} · last updated {{ entry.updated_at|date:"M j, Y, g:i a" }}</span>
+  </div>
+</form>
+<script>
+  (function () {
+    var form = document.querySelector("[data-panel=tracking]");
+    var text = document.getElementById("rating-text");
+    form.addEventListener("change", function (event) {
+      if (event.target.name !== "rating") return;
+      text.innerHTML = event.target.value ? event.target.value + " <small>of 5</small>" : "<small>Not rated</small>";
+    });
+    var notes = form.querySelector("textarea[name=notes]"), count = document.getElementById("notes-count");
+    notes.addEventListener("input", function () { count.textContent = notes.value.length.toLocaleString() + " / 2,000"; });
+  })();
+</script>

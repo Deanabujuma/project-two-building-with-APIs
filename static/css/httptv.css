@@ -244,3 +244,15 @@ footer.site a { color: var(--muted); text-decoration: underline; }
 .detail-poster { display: block; width: clamp(140px, 13vw, 210px); aspect-ratio: 2/3; object-fit: cover; margin: 0 0 20px auto;
   border-radius: var(--radius); box-shadow: 0 30px 60px rgba(0,0,0,.6); outline: 1px solid rgba(255,255,255,.12); }
 @media (max-width: 991px) { .detail-poster { display: none; } }
+
+/* ---------- Star rating built from radio buttons (works without JavaScript) ----------
+   Stars are written 5..1 and displayed in reverse, so "checked ~ label" lights the chosen
+   star and every star to its left. */
+.star-radio { position: relative; display: inline-flex; flex-direction: row-reverse; justify-content: flex-end; gap: 4px; border: 0; padding: 0; margin: 4px 0 6px; }
+.star-radio input { position: absolute; left: 0; top: 0; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.star-radio label { font-size: 2.1rem; line-height: 1; color: #3A3B45; cursor: pointer; transition: color .12s, transform .12s; }
+.star-radio input:checked ~ label, .star-radio label:hover, .star-radio label:hover ~ label { color: #FACC15; }
+.star-radio label:hover { transform: scale(1.12); }
+.star-radio input:focus-visible + label { outline: 2px solid #F9F9F9; outline-offset: 3px; border-radius: 4px; }
+.btn-remove { border-color: rgba(252,165,165,.6) !important; color: #FCA5A5 !important; }
+.track-panel .errorlist { margin-top: 6px; }
