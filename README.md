@@ -56,7 +56,22 @@ errors, HTTP 429/5xx, invalid JSON). Real requests are checked manually by runni
 HTTP.tv is a Django web app for finding TV shows on TVmaze, saving them to a personal
 collection, and tracking status, progress, ratings and notes. It also has its own authenticated
 REST API. The design is in `prd/httptv.md`, the build order in `plans/httptv.md`, and the UI
-prototypes in `prototypes/`. Sections below are added as each feature is built.
+prototypes in `prototypes/`.
+
+**Where things are**
+
+| Path | What it is |
+|---|---|
+| `accounts/` | custom user model, sign up, log in/out |
+| `shows/` | models, TVmaze client (`tvmaze.py`), save logic (`services.py`), shared validation and queries, web views |
+| `shows/api/` | REST API: serializers, viewset, filters, pagination |
+| `templates/`, `static/css/` | pages (Direction D design) |
+| `scripts/verify_tvmaze.py` | TVmaze check script (built first; unchanged) |
+| `scripts/httptv_client.py` | command-line client for the HTTP.tv API |
+| `prd/httptv.md`, `plans/httptv.md` | requirements and phased build plan |
+| `prototypes/` | `ui-convention-v1-variants.html` (three first layouts) and `ui-convention.html` (Direction D, the chosen design) |
+| `docs/research/free-media-apis.md` | API research that led to TVmaze |
+| `docs/evidence-log.md`, `docs/evidence/` | bugs and fixes, real requests/responses, screenshots, verification notes |
 
 Stack: Python ≥3.12 (3.14 pinned locally), Django 6.1, Django REST Framework 3.18,
 django-filter 26.2, SQLite, and pytest with pytest-django.
@@ -278,3 +293,30 @@ uv run --env-file .env python scripts/httptv_client.py next 2      # Season 2, E
 
 Errors (server not running, bad token, unknown entry ID, a rejected value) print one clear message
 to stderr and exit with code 1. Tests: `uv run pytest tests/test_httptv_client.py` (no server needed).
+
+### Manual verification checklist
+
+Automated tests mock every network call, so these checks use the real TVmaze API and a real
+browser. Results from the last full run are in `docs/evidence-log.md` (V15).
+
+1. **Fresh clone:** follow "First-time setup" in a new folder; `uv run pytest` passes.
+2. **Accounts:** sign up, log out, log in; logged-out users are sent to log in for My Collection.
+3. **Discover:** search `the office`, `café` (accented), and nonsense such as `zzqxjvk` (no-results message).
+4. **Save:** save a show from Discover; saving it again says it's already saved.
+5. **Show page:** backdrop or poster fallback, Where to Watch, View on TVmaze link, Extras (seasons and cast), Suggested.
+6. **Tracking:** enter a season without an episode (error, nothing saved), then a valid update; delete asks to confirm.
+7. **My Collection:** status chips with counts, title search, the three sorts, page 2.
+8. **Home:** the continue-tracking hero and rows reflect your updates.
+9. **API:** get a token; list, filter, order and page `/api/collection/`; browse `/api/` while logged in.
+10. **Client:** `list`, `update` and `next`, plus a wrong token and a stopped server (clear error, exit code 1).
+11. **verify_tvmaze.py:** `uv run python scripts/verify_tvmaze.py "café"`.
+12. **Phone width:** pages at ~390 px wide have no sideways scrolling.
+13. **Attribution:** every page footer credits TVmaze and CC BY-SA 4.0.
+
+## Data source and license
+
+Show information and images come from the [TVmaze API](https://www.tvmaze.com/api), licensed
+[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). HTTP.tv credits TVmaze in the
+footer of every page and links each show to its TVmaze page. HTTP.tv only tracks what you
+watch; it doesn't stream video. Tracking values in screenshots and prototypes (statuses,
+progress, ratings, notes) are invented sample data.

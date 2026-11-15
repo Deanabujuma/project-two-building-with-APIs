@@ -234,6 +234,13 @@ All taken with headless Microsoft Edge from `prototypes/` during the 2026-11-15 
 | `evidence/app-p9-api-root.png` | Browsable API root (logged-in session) |
 | `evidence/app-p9-api-collection.png` | Browsable API collection list, paginated |
 | `evidence/app-p11-api-browsable-filters.png` | Browsable API with the Filters button (status=watching, ordering=-rating) |
+| `evidence/app-p13-fresh-home-empty.png` | Fresh clone: new user's home right after sign-up |
+| `evidence/app-p13-fresh-collection.png` | Fresh clone: collection after saving and tracking one show |
+| `evidence/app-p13-discover-cafe.png` | Real search for "café" (accented characters) |
+| `evidence/app-p13-discover-no-results.png` | Real search with no results |
+| `evidence/app-p13-phone-home.png` | Final phone-width home |
+| `evidence/app-p13-phone-discover.png` | Final phone-width Discover |
+| `evidence/app-p13-phone-collection.png` | Final phone-width collection |
 
 ---
 
@@ -351,3 +358,49 @@ Source: each package's official PyPI metadata (`https://pypi.org/pypi/<package>/
 - **TDD for `next`:** `list` and `update` were built first. With them in place, only the four `next` tests failed (`4 failed, 19 passed`). After adding `next`: `472 passed`.
 - **`next` rule:** episode + 1; season and status never change; "Not started" becomes Season 1, Episode 1. Moving to a new season is left to `update --season N --episode 1`, because the API doesn't know how many episodes a season has.
 - Real run R17 above; error messages go to stderr with exit code 1.
+
+### V15 — Fresh clone and full manual checklist (2026-11-15, Phase 13)
+- **AC3 audit:** `git ls-files` lists no `.env`, database, token or secret key. The only passwords in tracked files are throwaway test-fixture values and the `.env.example` placeholder. A search of every commit found neither the real API token nor the real secret key.
+- **AC1 fresh clone:** cloned into a temporary folder and followed the README exactly (`uv sync`, copy `.env.example`, generate a key, `migrate`, `check`, `runserver` on port 8001): `472 passed` in the clone. `scripts/verify_tvmaze.py` and `tests/test_verify_tvmaze.py` are unchanged since before the Django work.
+- **New-user journey on the empty clone database:**
+  - sign up → welcome home;
+  - search "severance" → save ("Saved Severance to your collection as Plan to Watch.");
+  - track Watching, S1E4, 5 stars, notes → collection shows 1 entry → the home hero switches to "Continue tracking · Season 1, Episode 4".
+- **API on the clone:**
+  - got a token; `POST {"tvmaze_id": 169}` → 201;
+  - client `next` → "Breaking Bad: Not started -> Season 1, Episode 1";
+  - `update --status watching --rating 5`; `list` shows both entries.
+  - *My mistake while testing:* my first curl used `.../api//collection/` (a double slash), which returned 404. The correct URL worked. The client itself strips a trailing slash from `HTTPTV_API_URL`, so it can't make this mistake.
+- **Manual checklist (README items 2–13, dev server, `demo_user`):**
+
+| Check | Result |
+|---|---|
+| Discover "café" | 10 results, first "Café · 1994–1995 · RCN Televisión" |
+| Discover "zzqxjvk" | No shows found for "zzqxjvk" + spelling hint |
+| Footer on home, Discover, results, collection, show tabs, delete confirm, login, sign-up | TVmaze + CC BY-SA 4.0 on all |
+| Show page TVmaze link | "View on TVmaze" → show's TVmaze page |
+| Tracking: season 3, blank episode | 400, "Enter both a season and an episode, or leave both blank."; saved S2E3 unchanged |
+| Phone width (390 px): home, Discover, tracking, collection | no horizontal overflow |
+| `verify_tvmaze.py "café"` | Found 10 shows, exit 0 |
+| Client `list`/`update`/`next` + errors | see R17 |
+
+- **Gap found and closed (AC50 is marked T/M):** no automated test checked the attribution footer.
+  - Added `shows/tests/test_attribution.py` (13 tests): every page type, including the custom 404 and the 503 "show unavailable" page, plus the show's own TVmaze link.
+  - My first version expected `https://www.tvmaze.com/` with a trailing slash; the footer uses no slash, so the test was corrected, not the page.
+  - Result: `485 passed`.
+- **Note:** with `DJANGO_DEBUG=true` (local development), an unknown URL shows Django's yellow debug 404 page rather than the custom `404.html`. That's standard Django behaviour; the test above checks the custom page with debug off.
+
+## 5. Design Defense: prototype → built app
+
+| View | Prototype | Built app |
+|---|---|---|
+| First layouts considered | `prototype-v1-A-poster-grid.png`, `prototype-v1-B-dense-table.png`, `prototype-v1-C-list-detail.png` | Direction D chosen (cinematic, poster-led) |
+| Home | `prototype-D-revised-home-rows.png` | `app-p8-home.png`, `app-p8-home-phone.png`, `app-p13-fresh-home-empty.png` |
+| Discover | `prototype-D-revised-discover.png` | `app-p3-discover-after-identity-fix.png` (B6), `app-p13-discover-cafe.png` |
+| Show page + tracking | `prototype-D-revised-abbott-tracking.png`, `prototype-D-details-after-backdrop-fix.png` | `app-p4-abbott-saved.png`, `app-p6-tracking-saved.png`, `app-p6-tracking-error.png` |
+| Suggested / Extras | `prototype-D-revised-suggested.png` | `app-p5-suggested-empty.png`, `app-p5-abbott-extras.png` |
+| My Collection | `prototype-D-revised-collection.png` | `app-p7-collection.png`, `app-p7-collection-phone.png` |
+| Where to Watch | `prototype-D-details-with-illustrative-providers.png` (invented streaming providers) | Only the network or web channel TVmaze reports, labelled "verified by TVmaze", plus a link to TVmaze |
+| API | (no prototype) | `app-p9-api-root.png`, `app-p11-api-browsable-filters.png` |
+
+All files are in `docs/evidence/`.
