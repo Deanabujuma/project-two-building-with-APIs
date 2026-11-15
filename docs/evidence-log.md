@@ -131,6 +131,8 @@ All taken with headless Microsoft Edge from `prototypes/` during the 2026-11-15 
 | `evidence/app-p7-watching.png` | Watching nav link: filtered page with its own title |
 | `evidence/app-p7-no-match.png` | `q=goats`: title-only search, no-match state with Clear filters |
 | `evidence/app-p7-collection-phone.png` | Collection at phone width; chips scroll inside their row |
+| `evidence/app-p8-home.png` | Personalized home: featured hero (Dark) and four rows with consistent cards |
+| `evidence/app-p8-home-phone.png` | Home at phone width |
 
 ---
 
@@ -218,3 +220,8 @@ Source: each package's official PyPI metadata (`https://pypi.org/pypi/<package>/
   - `sort=-rating` lists 5-star shows first and unrated last;
   - `status=watching` shows the "Watching" title;
   - `q=goats` → "No shows match" (titles only).
+
+### V10 — Personalized home page (2026-11-15, Phase 8)
+- `uv run pytest -q` → `318 passed`.
+- **One test-setup mistake:** my rendering test assumed the first-saved Watching entry would be featured, but the most recently *updated* one (saved last) correctly was. The template was right; the test setup was fixed by updating the intended entry first.
+- **AC32 (manual):** across all four rows, Discover, Suggested and the collection grid, cards share the 20 px gap, the 4% hover, and the title / status / "Season X, Episode Y" caption. Check marks appear only in mixed rows (Discover, Suggested).

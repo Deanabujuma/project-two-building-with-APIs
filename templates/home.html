@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load show_display %}
 {% block title %}HTTP.tv{% endblock %}
 {% block content %}
   {% if not user.is_authenticated %}
@@ -13,7 +14,7 @@
         </div>
       </div></div>
     </section>
-  {% else %}
+  {% elif not featured %}
     <section class="hero" data-hero="welcome-empty" style="min-height:clamp(420px,62vh,640px);background:radial-gradient(ellipse at 70% 30%, #1E3A8A 0%, var(--bg) 60%)">
       <div class="hero-content px-edge"><div class="hero-text">
         <div class="eyebrow">Welcome to HTTP.tv</div>
@@ -22,5 +23,49 @@
         <a class="btn-pill btn-white" href="{% url 'shows:discover' %}"><i class="bi bi-search"></i>Discover shows</a>
       </div></div>
     </section>
+  {% else %}
+    {% with show=featured.show %}
+    <section class="hero {% if not show.background_url %}hero--poster{% endif %}" data-hero="featured" data-featured="{{ show.tvmaze_id }}">
+      {% if show.background_url %}<div class="hero-bg" style="background-image:url('{{ show.background_url }}')"></div>
+      {% else %}<div class="hero-bg" {% if show.image_url %}style="background-image:url('{{ show.image_url }}')"{% endif %}></div>{% if show.image_url %}<img class="hero-poster" src="{{ show.image_url }}" alt="">{% endif %}{% endif %}
+      <div class="hero-shade"></div>
+      <div class="hero-content px-edge"><div class="hero-text">
+        <div class="eyebrow">{% if featured.status == "watching" %}Continue tracking · {{ featured.progress_text }}{% else %}Recently updated · {{ featured.get_status_display }}{% endif %}</div>
+        <h1 class="hero-title">{{ show.name }}</h1>
+        <div class="badges">
+          {% if show.show_status %}<span class="mbadge solid">{{ show.show_status|upper }}</span>{% endif %}
+          {% if show.show_type %}<span class="mbadge">{{ show.show_type|upper }}</span>{% endif %}
+          {% if show.runtime %}<span class="mbadge"><i class="bi bi-clock"></i>{{ show.runtime }} MIN</span>{% endif %}
+          {% if show.language %}<span class="mbadge">{{ show.language|upper }}</span>{% endif %}
+          {% if show.tvmaze_rating %}<span class="mbadge"><i class="bi bi-star-fill"></i>{{ show.tvmaze_rating|tvmaze_rating_text }} TVMAZE</span>{% endif %}
+        </div>
+        <div class="hero-meta">{% with y=show.premiered|date:"Y" %}{{ y }}{% if y and show.genres %}<span class="dot">•</span>{% endif %}{% endwith %}{{ show.genres }}{% if show.network %}<span class="dot">•</span>{{ show.network }}{% endif %}</div>
+        <p class="hero-desc clamp-2">{{ show.summary }}</p>
+        <div class="d-flex flex-wrap gap-3">
+          <a class="btn-pill btn-white" href="{% url 'shows:detail' show.tvmaze_id %}?tab=tracking">More info</a>
+          <a class="btn-pill btn-saved" href="{% url 'shows:detail' show.tvmaze_id %}?tab=tracking"><i class="bi bi-check-lg"></i>In your collection</a>
+        </div>
+      </div></div>
+    </section>
+    {% endwith %}
+
+    <div style="margin-top:-20px;position:relative">
+      {% for row in rows %}
+        <section class="rail-section px-edge" data-row="{{ row.key }}">
+          <h2 class="rail-title">{{ row.title }}{% if row.sub %}<small>{{ row.sub }}</small>{% endif %}</h2>
+          <div class="rail-wrap">
+            <button class="rail-btn prev" type="button" data-scroll="-1" aria-label="Scroll left">‹</button>
+            <div class="rail">
+              {% for entry in row.entries %}
+                {% url 'shows:detail' entry.show.tvmaze_id as detail_url %}
+                {% include "includes/tile.html" with show=entry.show entry=entry wide=row.wide flag=False href=detail_url|add:"?tab=tracking" %}
+              {% endfor %}
+            </div>
+            <button class="rail-btn next" type="button" data-scroll="1" aria-label="Scroll right">›</button>
+          </div>
+        </section>
+      {% endfor %}
+    </div>
   {% endif %}
 {% endblock %}
+{% block scripts %}{% include "includes/rail_script.html" %}{% endblock %}

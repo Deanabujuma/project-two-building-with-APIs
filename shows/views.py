@@ -15,9 +15,35 @@ from .forms import TrackingForm
 from .models import CollectionEntry, Show
 
 
+HOME_RECENT_LIMIT = 10
+
+
+def home_context(user):
+    """The personal home page: one featured show and four rows, all from the user's entries.
+
+    The hero features the most recently updated Watching entry, falling back to the most
+    recently updated entry of any status. Continue Tracking lists the other Watching entries.
+    """
+    by_updated = list(queries.order_entries(queries.collection_entries(user), "-updated_at"))
+    featured = next((e for e in by_updated if e.status == "watching"), by_updated[0] if by_updated else None)
+    by_created = sorted(by_updated, key=lambda e: e.created_at, reverse=True)
+    rows = [
+        {"key": "continue", "title": "Continue Tracking", "sub": "Watching, most recently updated", "wide": True,
+         "entries": [e for e in by_updated if e.status == "watching" and e != featured]},
+        {"key": "watchlist", "title": "My Watchlist", "sub": "Plan to Watch", "wide": False,
+         "entries": [e for e in by_updated if e.status == "plan_to_watch"]},
+        {"key": "recent", "title": "Recently Added", "sub": "Newest saves first", "wide": False,
+         "entries": by_created[:HOME_RECENT_LIMIT]},
+        {"key": "completed", "title": "Completed Shows", "sub": "", "wide": False,
+         "entries": [e for e in by_updated if e.status == "completed"]},
+    ]
+    return {"featured": featured, "rows": [row for row in rows if row["entries"]]}
+
+
 def home(request):
     """Public home page: a welcome hero for visitors, the personal home for users."""
-    return render(request, "home.html")
+    context = home_context(request.user) if request.user.is_authenticated else {}
+    return render(request, "home.html", context)
 
 
 def saved_entries_by_tvmaze_id(user, tvmaze_ids):

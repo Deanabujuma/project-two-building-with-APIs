@@ -193,3 +193,11 @@ so any view can be bookmarked:
 Unrated shows always sort after rated ones. The owner scoping, status filter and ordering come
 from `shows/queries.py`, the same code the API uses, so both list the same entries in the same
 order.
+
+### Home page
+
+Logged-in users see a large hero for the show they're currently tracking (the most recently
+updated **Watching** entry; if there is none, the most recently updated entry). Below it are
+rows of their own shows: **Continue Tracking**, **My Watchlist**, **Recently Added** (newest 10
+saves of any status) and **Completed Shows**. Empty rows are hidden. With an empty collection,
+the page shows a welcome hero with a **Discover shows** button.
