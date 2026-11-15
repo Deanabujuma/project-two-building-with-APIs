@@ -55,6 +55,19 @@ Sections:
 - **Fix:** on the details page the poster is now part of the right-hand column's normal layout, above the summary, so it can't overlap. It's hidden under the large breakpoint, where the blurred poster background remains. Two tests cover the fallback and backdrop cases.
 - **After:** `evidence/app-p4-poster-fallback-after-fix.png`.
 
+### B8 — Stray space before punctuation in summaries (2026-11-15, Phase 5 manual test)
+- **Before:** the unsaved US *The Office* page (TVmaze 526) read "Steve Carell stars in The Office , a fresh and funny…". TVmaze's real HTML is `<p>Steve Carell stars in <b>The Office</b>, a fresh…`, and `strip_html` replaced *every* tag with a space. Screenshot: `evidence/app-p5-summary-spacing-before-fix.png`.
+- **How found:** reading a live details page; the Phase 3 test used `<b>Mark</b> leads`, where a space follows the tag anyway.
+- **Test first:** added `test_strip_html_does_not_add_space_before_punctuation_after_inline_tags`, using the real HTML. Result: `1 failed, 16 passed`.
+- **Fix:** only block tags (`p`, `br`, `div`, `li`, `ul`, `ol`, `h1`–`h6`) become spaces; inline tags are removed with nothing in their place. Result: `203 passed`.
+- **Side bug while fixing:** a shell-quoted edit wrote the regex's word boundary `\b` as a literal backspace character (byte `0x08`), so block tags stopped matching ("First.Second.Linebreakend"). It was caught by the existing tests (2 failed) and replaced with the lookahead `(?=[\s/>])`.
+- **After:** "Steve Carell stars in The Office, a fresh…" (`evidence/app-p5-unsaved-show-after-fix.png`).
+
+### B9 — Extras accepted a response that wasn't a show (2026-11-15, Phase 5 automated test)
+- **Before:** if TVmaze returned JSON that wasn't a show object (e.g. `{"not": "a list"}`), `get_extras` showed "No seasons / No cast" as if the show had none.
+- **How found:** the shared failure test cases, run against the Extras tab (`1 failed, 200 passed`).
+- **Fix:** `get_extras` now requires a show object with an `id`, and otherwise raises the same "couldn't read" error as other calls. Result: `201 passed`.
+
 ---
 
 ## 2. Requests and responses
@@ -93,6 +106,11 @@ All taken with headless Microsoft Edge from `prototypes/` during the 2026-11-15 
 | `evidence/app-p4-severance-phone.png` | Severance details stacked at phone width |
 | `evidence/app-p4-poster-fallback-before-fix.png` | No-backdrop show: poster covered by the summary (B7 before) |
 | `evidence/app-p4-poster-fallback-after-fix.png` | No-backdrop show: poster above the summary (B7 after) |
+| `evidence/app-p5-abbott-extras.png` | Abbott Elementary Extras: 6 seasons and 7 cast from live TVmaze |
+| `evidence/app-p5-abbott-extras-phone.png` | Extras at phone width |
+| `evidence/app-p5-suggested-empty.png` | Severance Suggested: honest label, empty state (no other matching shows saved yet) |
+| `evidence/app-p5-summary-spacing-before-fix.png` | Unsaved The Office: "The Office , a" (B8 before) |
+| `evidence/app-p5-unsaved-show-after-fix.png` | Unsaved The Office, live and not saved: fixed summary (B8 after) |
 
 ---
 
@@ -151,3 +169,11 @@ Source: each package's official PyPI metadata (`https://pypi.org/pypi/<package>/
 
 - **Known limitation confirmed:** the automatic rule picked a Severance backdrop with "Severance" printed in the artwork (`evidence/app-p4-severance-baked-title.png`), as predicted in B1 and accepted in design decision 14.
 - Discover then showed Severance's card as "Plan to Watch · Not started" with the green check instead of `+`.
+
+### V7 — Complete details page (2026-11-15, Phase 5)
+- `uv run pytest -q` → `204 passed`.
+- **Live checks:**
+  - Abbott Elementary Extras showed 6 seasons (13/22/14/22/22/22 episodes) and the cast (Quinta Brunson as Janine Teagues, …).
+  - The unsaved *The Office* (526) displayed from live TVmaze, with **Add to my collection**. The `Show` count stayed at 3 afterwards, so viewing didn't save it.
+  - `/shows/999999999/` → 404.
+- **AC21 (manual):** the details layout matches the approved prototype: metadata on the left, summary on the right at 1440 px, stacked at 390 px, and the poster fallback (see B7).

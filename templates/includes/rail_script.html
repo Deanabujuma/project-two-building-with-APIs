@@ -1,0 +1,9 @@
+<script>
+  // Row scroll buttons: scroll the neighbouring row by most of its visible width.
+  document.addEventListener("click", function (event) {
+    var button = event.target.closest("[data-scroll]");
+    if (!button) return;
+    var rail = button.parentElement.querySelector(".rail");
+    rail.scrollBy({ left: Number(button.dataset.scroll) * rail.clientWidth * 0.85, behavior: "smooth" });
+  });
+</script>

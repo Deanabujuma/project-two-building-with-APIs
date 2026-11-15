@@ -1,0 +1,22 @@
+<div data-panel="extras">
+{% if extras_error %}
+  <div class="empty-panel" data-extras-error><div class="label-caps">Extras unavailable</div><p class="muted mb-0">{{ extras_error }}</p></div>
+{% else %}
+  <p class="note-line">Seasons and cast come from TVmaze.</p>
+  <div class="rail-title mt-3">Seasons</div>
+  <div class="rail-wrap"><div class="rail">
+    {% for season in extras.seasons %}
+      <div class="season-card"><div class="label-caps mb-1">Season {{ season.number }}</div>
+        <div class="fs-5 fw-bold">{% if season.episodes %}{{ season.episodes }} episode{{ season.episodes|pluralize }}{% else %}Episodes TBA{% endif %}</div>
+        <div class="muted small">{{ season.start|slice:":4" }}{% if season.end and season.end|slice:":4" != season.start|slice:":4" %}–{{ season.end|slice:":4" }}{% endif %}</div></div>
+    {% empty %}<span class="muted">No seasons listed on TVmaze.</span>{% endfor %}
+  </div></div>
+  <div class="rail-title">Cast</div>
+  <div class="rail-wrap"><div class="rail">
+    {% for member in extras.cast %}
+      <div class="cast-card">{% if member.image %}<img src="{{ member.image }}" alt="" loading="lazy">{% else %}<div class="fallback-art">{{ member.person|slice:":1" }}</div>{% endif %}
+        <div class="fw-semibold small">{{ member.person }}</div><div class="dim" style="font-size:.75rem">{{ member.character }}</div></div>
+    {% empty %}<span class="muted">No cast listed on TVmaze.</span>{% endfor %}
+  </div></div>
+{% endif %}
+</div>

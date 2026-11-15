@@ -1,0 +1,17 @@
+{% load show_display %}{# The shared row card. Context: show, entry, wide (bool), flag (bool), href (optional). #}
+<a class="tile {% if wide %}tile-wide{% else %}tile-poster{% endif %}" href="{% if href %}{{ href }}{% else %}{% url 'shows:detail' show.tvmaze_id %}{% endif %}" data-tile="{{ show.tvmaze_id }}">
+  <div class="art">
+    {% if wide and show.background_url %}<img src="{{ show.background_url }}" alt="" loading="lazy">
+    {% elif show.image_url %}<img src="{{ show.image_url }}" alt="{{ show.name }} poster" loading="lazy" {% if wide %}style="object-position:center 20%"{% endif %}>
+    {% else %}<div class="fallback-art">{{ show.name|initial }}</div>{% endif %}
+    {% if entry and flag %}<span class="tile-flag" title="In your collection"><i class="bi bi-check-lg"></i></span>{% endif %}
+  </div>
+  <div class="cap-t clamp-1">{{ show.name }}</div>
+  {% if entry %}
+    <div class="cap-s"><span class="sdot st-{{ entry.status }}"></span>{{ entry.get_status_display }}</div>
+    <div class="cap-p {% if entry.has_progress %}started{% endif %}">{{ entry.progress_text }}</div>
+  {% else %}
+    <div class="cap-s"><i class="bi bi-plus-circle"></i>Not in your collection</div>
+    <div class="cap-p">{{ show|identity_line }}</div>
+  {% endif %}
+</a>

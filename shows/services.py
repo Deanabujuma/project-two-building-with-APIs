@@ -1,6 +1,7 @@
 """Business operations shared by the web pages and the REST API."""
 
 from django.db import IntegrityError, transaction
+from django.db.models import Q
 
 from . import tvmaze
 from .models import CollectionEntry, Show
@@ -38,3 +39,28 @@ def save_show_to_collection(user, tvmaze_id):
     except IntegrityError:
         # A second request saved the same show at the same moment.
         raise AlreadySaved(CollectionEntry.objects.select_related("show").get(user=user, show__tvmaze_id=tvmaze_id))
+
+
+def _genre_set(genres):
+    return {genre.strip().lower() for genre in (genres or "").split(",") if genre.strip()}
+
+
+def suggested_shows(tvmaze_id, genres, limit=20):
+    """Shows already on HTTP.tv that share at least one genre with this show.
+
+    Ranked by how many genres they share, then by name, excluding the show itself.
+    This is a local genre match, not a TVmaze recommendation.
+    """
+    wanted = _genre_set(genres)
+    if not wanted:
+        return []
+    candidates = Q()
+    for genre in wanted:
+        candidates |= Q(genres__icontains=genre)
+    scored = []
+    for show in Show.objects.filter(candidates).exclude(tvmaze_id=tvmaze_id):
+        shared = len(wanted & _genre_set(show.genres))
+        if shared:
+            scored.append((-shared, show.name.lower(), show))
+    scored.sort(key=lambda item: item[:2])
+    return [show for _, _, show in scored[:limit]]

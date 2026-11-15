@@ -52,18 +52,24 @@
 </section>
 
 <section class="px-edge" style="position:relative;margin-top:6px">
-  {% block show_tabs %}
-    {% if entry %}
-      <nav class="tabbar" aria-label="Show sections"><a href="?tab=tracking" class="active">MY TRACKING</a></nav>
-      <div class="track-panel" data-tracking-summary>
-        <div class="track-grid">
-          <section class="tpanel"><div class="label-caps">Status &amp; progress</div><div class="fs-5 fw-bold"><span class="sdot st-{{ entry.status }} me-2"></span>{{ entry.get_status_display }}</div><div class="muted">{{ entry.progress_text }}</div></section>
-          <section class="tpanel"><div class="label-caps">My rating</div><div class="rating-text">{% if entry.rating %}{{ entry.rating }} <small>of 5</small>{% else %}<small>Not rated</small>{% endif %}</div></section>
-          <section class="tpanel tpanel-notes"><div class="label-caps">Notes</div><p class="muted mb-0">{{ entry.notes|default:"No notes yet." }}</p></section>
-        </div>
-        <div class="track-actions"><span class="dim small">Saved {{ entry.created_at|date:"M j, Y" }} · last updated {{ entry.updated_at|date:"M j, Y" }}</span></div>
-      </div>
+  <nav class="tabbar" aria-label="Show sections">
+    {% for key, label in tabs %}<a href="?tab={{ key }}" class="{% if tab == key %}active{% endif %}" {% if tab == key %}aria-current="page"{% endif %} data-tab="{{ key }}">{{ label }}</a>{% endfor %}
+  </nav>
+
+  {% if tab == "tracking" %}
+    {% include "shows/partials/tracking_panel.html" %}
+  {% elif tab == "extras" %}
+    {% include "shows/partials/extras_panel.html" %}
+  {% else %}
+    <p class="note-line" data-panel="suggested">Shows on HTTP.tv that share at least one genre with {{ show.name }}{% if show.genres %} ({{ show.genres }}){% endif %}. Matched locally by genre; not a TVmaze recommendation.</p>
+    {% if suggestions %}
+      <div class="rail-wrap"><button class="rail-btn prev" type="button" data-scroll="-1" aria-label="Scroll left">‹</button>
+        <div class="rail">{% for item in suggestions %}{% include "includes/tile.html" with show=item.show entry=item.entry wide=True flag=True %}{% endfor %}</div>
+        <button class="rail-btn next" type="button" data-scroll="1" aria-label="Scroll right">›</button></div>
+    {% else %}
+      <div class="empty-panel" data-empty="suggested"><p class="muted mb-0">No other shows on HTTP.tv share a genre with this one yet. Saving more shows makes suggestions appear here.</p></div>
     {% endif %}
-  {% endblock %}
+  {% endif %}
 </section>
 {% endblock %}
+{% block scripts %}{% include "includes/rail_script.html" %}{% endblock %}

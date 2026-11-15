@@ -149,3 +149,16 @@ isn't one, the page uses the poster. **Where to watch** shows only the original 
 channel that TVmaze lists, and links to the show's TVmaze page; HTTP.tv never claims streaming
 availability. Known limitation: some TVmaze backdrops have the show's title printed in the
 artwork (e.g. Severance), because there's no reliable automatic way to detect it.
+
+### Show pages and tabs
+
+`/shows/<tvmaze_id>/` works for any TVmaze show. Shows that are already saved load from
+HTTP.tv's database. Any other show is fetched live from TVmaze and **not** saved until you click
+**Add to my collection**. An unknown ID returns 404; if TVmaze is down, you see a friendly
+"can't be loaded right now" page.
+
+| Tab (`?tab=`) | Shown when | Content |
+|---|---|---|
+| `tracking` (My Tracking) | the show is in your collection (default) | your status, progress, rating and notes |
+| `suggested` (Suggested) | always (default for unsaved shows) | other saved shows sharing at least one genre, ranked by shared genres then name; a local match, not a TVmaze recommendation |
+| `extras` (Extras) | always | seasons and up to 8 cast members, fetched from TVmaze only when this tab is opened |

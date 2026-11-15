@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Show unavailable · HTTP.tv{% endblock %}
+{% block content %}
+<div class="page-top px-edge">
+  <div class="empty-state" data-state="show-unavailable"><i class="bi bi-cloud-slash"></i>
+    <h1 class="h4 mt-3">This show can't be loaded right now</h1>
+    <p class="muted">{{ error }}</p>
+    <div class="d-flex flex-wrap gap-3 justify-content-center mt-2">
+      <a class="btn-pill btn-white" href="{% url 'shows:detail' tvmaze_id %}">Try again</a>
+      <a class="btn-pill btn-ghost" href="{% url 'shows:discover' %}">Back to Discover</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

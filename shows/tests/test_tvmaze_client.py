@@ -88,3 +88,13 @@ def test_strip_html_removes_tags_and_decodes_entities():
     html = "<p><b>Mark</b> leads a team.</p><p>Caf&eacute; &amp; more&#39;s</p>"
     assert tvmaze.strip_html(html) == "Mark leads a team. Café & more's"
     assert tvmaze.strip_html(None) == ""
+
+
+def test_strip_html_does_not_add_space_before_punctuation_after_inline_tags():
+    # Real TVmaze summary for The Office (US), show 526: "<p>Steve Carell stars in <b>The Office</b>, a fresh ..."
+    html = "<p>Steve Carell stars in <b>The Office</b>, a fresh and funny <i>mockumentary</i>-style glimpse.</p>"
+    assert tvmaze.strip_html(html) == "Steve Carell stars in The Office, a fresh and funny mockumentary-style glimpse."
+
+
+def test_strip_html_keeps_words_apart_across_block_tags():
+    assert tvmaze.strip_html("<p>First.</p><p>Second.</p>Line<br>break<br/>end") == "First. Second. Line break end"

@@ -73,7 +73,10 @@ def strip_html(value):
     """Turn TVmaze's HTML summary into plain text (tags removed, entities decoded)."""
     if not value:
         return ""
-    text = re.sub(r"<[^>]+>", " ", value)
+    # Block tags separate words, so they become spaces; inline tags such as <b> and <i>
+    # are removed without a space (otherwise "<b>The Office</b>, a" -> "The Office , a").
+    text = re.sub(r"</?(p|br|div|li|ul|ol|h[1-6])(?=[\s/>])[^>]*>", " ", value, flags=re.IGNORECASE)
+    text = re.sub(r"<[^>]+>", "", text)
     text = html.unescape(text)
     return re.sub(r"\s+", " ", text).strip()
 
@@ -157,10 +160,55 @@ def search_shows(term):
     return shows
 
 
+MAX_CAST = 8
+
+
+def _fetch_show(tvmaze_id, embeds):
+    return _get(f"/shows/{int(tvmaze_id)}", {"embed[]": list(embeds)})
+
+
+def map_extras(raw):
+    """Seasons and up to 8 cast members from a show fetched with seasons and cast embedded."""
+    embedded = (raw.get("_embedded") or {}) if isinstance(raw, dict) else {}
+    seasons = []
+    for season in embedded.get("seasons") or []:
+        if isinstance(season, dict) and season.get("number") is not None:
+            seasons.append({
+                "number": season["number"],
+                "episodes": season.get("episodeOrder"),
+                "start": season.get("premiereDate") or "",
+                "end": season.get("endDate") or "",
+            })
+    cast = []
+    for member in (embedded.get("cast") or [])[:MAX_CAST]:
+        person = (member or {}).get("person") or {}
+        character = (member or {}).get("character") or {}
+        if person.get("name"):
+            cast.append({
+                "person": person["name"],
+                "character": character.get("name") or "",
+                "image": (person.get("image") or {}).get("medium") or "",
+            })
+    return {"seasons": seasons, "cast": cast}
+
+
 def get_show(tvmaze_id):
     """Fetch one show with its images embedded (one request) and return mapped fields.
 
     Raises ShowNotFound for an unknown ID, or TVmazeError for any other problem.
     """
-    data = _get(f"/shows/{int(tvmaze_id)}", {"embed[]": ["images"]})
-    return map_show(data)
+    return map_show(_fetch_show(tvmaze_id, ["images"]))
+
+
+def get_extras(tvmaze_id):
+    """Fetch a show's seasons and cast (one request), for the Extras tab."""
+    raw = _fetch_show(tvmaze_id, ["seasons", "cast"])
+    if not isinstance(raw, dict) or not raw.get("id"):
+        raise _unreadable()
+    return map_extras(raw)
+
+
+def get_show_and_extras(tvmaze_id):
+    """Fetch show details, seasons and cast in a single request (unsaved show on Extras)."""
+    raw = _fetch_show(tvmaze_id, ["images", "seasons", "cast"])
+    return map_show(raw), map_extras(raw)

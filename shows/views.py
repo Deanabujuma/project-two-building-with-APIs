@@ -76,14 +76,59 @@ def add_to_collection(request):
     return redirect(f"{reverse('shows:detail', args=[tvmaze_id])}?tab=tracking")
 
 
+TABS = {"tracking": "MY TRACKING", "suggested": "SUGGESTED", "extras": "EXTRAS"}
+
+
 @login_required
 def show_detail(request, tvmaze_id):
-    """A show's details page. (Phase 4b: saved shows from local data; Phase 5 adds the rest.)"""
+    """A show's details page.
+
+    Saved shows (a local Show row) render from the database. Any other show is fetched
+    live from TVmaze and displayed, but never written to the database. Extras (seasons
+    and cast) are fetched from TVmaze only when that tab is opened.
+    """
     show = Show.objects.filter(tvmaze_id=tvmaze_id).first()
+    entry = CollectionEntry.objects.filter(user=request.user, show=show).first() if show else None
+
+    tabs = ["tracking", "suggested", "extras"] if entry else ["suggested", "extras"]
+    tab = request.GET.get("tab")
+    if tab not in tabs:
+        tab = tabs[0]
+
+    extras, extras_error = None, ""
     if show is None:
-        raise Http404("Show not found")
-    entry = CollectionEntry.objects.filter(user=request.user, show=show).first()
-    return render(request, "shows/show_detail.html", {"show": show, "entry": entry})
+        try:
+            if tab == "extras":
+                show, extras = tvmaze.get_show_and_extras(tvmaze_id)  # one request for both
+            else:
+                show = tvmaze.get_show(tvmaze_id)
+        except tvmaze.ShowNotFound:
+            raise Http404("TVmaze has no show with that ID.")
+        except tvmaze.TVmazeError as error:
+            return render(request, "shows/show_unavailable.html", {"error": str(error), "tvmaze_id": tvmaze_id}, status=503)
+    elif tab == "extras":
+        try:
+            extras = tvmaze.get_extras(tvmaze_id)
+        except tvmaze.TVmazeError as error:
+            extras_error = str(error)
+
+    context = {
+        "show": show,
+        "entry": entry,
+        "tab": tab,
+        "tabs": [(key, TABS[key]) for key in tabs],
+        "extras": extras,
+        "extras_error": extras_error,
+    }
+    if tab == "suggested":
+        suggestions = services.suggested_shows(tvmaze_id, _value(show, "genres"))
+        saved = saved_entries_by_tvmaze_id(request.user, [s.tvmaze_id for s in suggestions])
+        context["suggestions"] = [{"show": s, "entry": saved.get(s.tvmaze_id)} for s in suggestions]
+    return render(request, "shows/show_detail.html", context)
+
+
+def _value(show, name):
+    return show.get(name) if isinstance(show, dict) else getattr(show, name)
 
 
 @login_required
