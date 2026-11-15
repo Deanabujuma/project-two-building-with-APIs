@@ -67,6 +67,11 @@ All taken with headless Microsoft Edge from `prototypes/` during the 2026-11-15 
 | `evidence/prototype-D-revised-suggested.png` | Revised: Suggested row, flags only on saved shows |
 | `evidence/prototype-D-revised-collection.png` | Revised: My Collection grid |
 | `evidence/prototype-D-revised-discover.png` | Revised: Discover results with saved and unsaved states |
+| `evidence/app-p2-home-public.png` | Built app: logged-out home with Sign up and Log in |
+| `evidence/app-p2-signup.png` | Built app: sign-up page |
+| `evidence/app-p2-home-public-phone.png` | Built app: logged-out home at phone width |
+| `evidence/app-p2-home-logged-in.png` | Built app: logged-in nav, empty-collection welcome |
+| `evidence/app-p2-home-logged-in-phone.png` | Built app: icon-only nav at phone width |
 
 ---
 
@@ -94,3 +99,8 @@ Source: each package's official PyPI metadata (`https://pypi.org/pypi/<package>/
 - `uv run pytest -q` → `50 passed` (44 original + 6 new setup tests), without `.env`.
 - `manage.py check` → "System check identified no issues". Dev server: `/admin/login/` → HTTP 200.
 - `git status` confirms `.env` and `db.sqlite3` are ignored.
+
+### V3 — Public shell and accounts (2026-11-15, Phase 2)
+- `uv run pytest -q` → `76 passed` (44 original + 32 new).
+- Browser check (headless Edge driven by Playwright, `demo_user` test account) at 1440×900 and 390×844: no horizontal overflow on any page. The only console error was a `/favicon.ico` 404, fixed by adding an inline SVG icon to the base template.
+- Screenshots: `evidence/app-p2-home-public.png`, `app-p2-signup.png`, `app-p2-home-public-phone.png`, `app-p2-home-logged-in.png`, `app-p2-home-logged-in-phone.png`.

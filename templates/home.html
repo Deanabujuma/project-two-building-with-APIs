@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}HTTP.tv{% endblock %}
+{% block content %}
+  {% if not user.is_authenticated %}
+    <section class="hero" data-hero="welcome-public" style="min-height:clamp(460px,72vh,720px);background:radial-gradient(ellipse at 70% 30%, #1E3A8A 0%, var(--bg) 60%)">
+      <div class="hero-content px-edge"><div class="hero-text">
+        <div class="eyebrow">Welcome to HTTP.tv</div>
+        <h1 class="hero-title">Track every show you watch.</h1>
+        <p class="hero-desc">Search TVmaze, save shows to your collection, and keep your progress, ratings and notes in one place.</p>
+        <div class="d-flex flex-wrap gap-3">
+          <a class="btn-pill btn-white" href="{% url 'accounts:signup' %}">Sign up</a>
+          <a class="btn-pill btn-ghost" href="{% url 'accounts:login' %}">Log in</a>
+        </div>
+      </div></div>
+    </section>
+  {% else %}
+    <section class="hero" data-hero="welcome-empty" style="min-height:clamp(420px,62vh,640px);background:radial-gradient(ellipse at 70% 30%, #1E3A8A 0%, var(--bg) 60%)">
+      <div class="hero-content px-edge"><div class="hero-text">
+        <div class="eyebrow">Welcome to HTTP.tv</div>
+        <h1 class="hero-title">Track every show you watch.</h1>
+        <p class="hero-desc">Search TVmaze, save shows to your collection, and keep your progress, ratings and notes in one place.</p>
+        <a class="btn-pill btn-white" href="{% url 'shows:discover' %}"><i class="bi bi-search"></i>Discover shows</a>
+      </div></div>
+    </section>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Log in · HTTP.tv{% endblock %}
+{% block content %}
+<div class="auth-wrap"><div class="auth-card form-dark">
+  <div class="label-caps">Welcome back</div>
+  <h1 class="h3 fw-bold mb-4">Log in to HTTP.tv</h1>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}<ul class="errorlist">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+    {% for field in form %}
+      <div class="mb-3">
+        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {{ field.errors }}
+      </div>
+    {% endfor %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <button class="btn-pill btn-white w-100 mt-2" type="submit">Log in</button>
+  </form>
+  <p class="muted small mt-4 mb-0">New to HTTP.tv? <a class="text-decoration-underline" href="{% url 'accounts:signup' %}">Create an account</a></p>
+</div></div>
+{% endblock %}

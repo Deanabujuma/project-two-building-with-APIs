@@ -1,0 +1,31 @@
+<header class="topnav">
+  {% if user.is_authenticated %}
+    <div class="nav-inner px-edge" data-nav="private">
+      <a class="profile" href="{% url 'shows:collection' %}" aria-label="My collection">
+        <span class="avatar">{{ user.username|first|upper }}</span><span class="uname">{{ user.username }}</span>
+      </a>
+      <nav class="mainnav" aria-label="Main">
+        <a class="brand" href="{% url 'home' %}">HTTP<span>.tv</span></a>
+        <a class="navlink {% if nav_active == 'home' %}active{% endif %}" href="{% url 'home' %}" {% if nav_active == 'home' %}aria-current="page"{% endif %} title="Home"><i class="bi bi-house-door"></i><span>Home</span></a>
+        <a class="navlink {% if nav_active == 'discover' %}active{% endif %}" href="{% url 'shows:discover' %}" {% if nav_active == 'discover' %}aria-current="page"{% endif %} title="Discover"><i class="bi bi-compass"></i><span>Discover</span></a>
+        <a class="navlink {% if nav_active == 'collection' %}active{% endif %}" href="{% url 'shows:collection' %}" {% if nav_active == 'collection' %}aria-current="page"{% endif %} title="My Collection"><i class="bi bi-collection"></i><span>My Collection</span></a>
+        <a class="navlink {% if nav_active == 'watching' %}active{% endif %}" href="{% url 'shows:collection' %}?status=watching" {% if nav_active == 'watching' %}aria-current="page"{% endif %} title="Watching"><i class="bi bi-eye"></i><span>Watching</span></a>
+        <a class="navlink {% if nav_active == 'completed' %}active{% endif %}" href="{% url 'shows:collection' %}?status=completed" {% if nav_active == 'completed' %}aria-current="page"{% endif %} title="Completed"><i class="bi bi-check2-circle"></i><span>Completed</span></a>
+      </nav>
+      <div class="nav-right">
+        <a class="nav-search {% if nav_active == 'discover' %}active{% endif %}" href="{% url 'shows:discover' %}" aria-label="Search TVmaze"><i class="bi bi-search"></i></a>
+        <form class="nav-logout" method="post" action="{% url 'accounts:logout' %}">
+          {% csrf_token %}<button type="submit" aria-label="Log out" title="Log out"><i class="bi bi-box-arrow-right"></i></button>
+        </form>
+      </div>
+    </div>
+  {% else %}
+    <div class="nav-public px-edge" data-nav="public">
+      <a class="brand" href="{% url 'home' %}">HTTP<span>.tv</span></a>
+      <div class="actions">
+        <a class="btn-pill btn-ghost btn-sm-pill" href="{% url 'accounts:login' %}">Log in</a>
+        <a class="btn-pill btn-white btn-sm-pill" href="{% url 'accounts:signup' %}">Sign up</a>
+      </div>
+    </div>
+  {% endif %}
+</header>

@@ -97,3 +97,16 @@ Every `manage.py` command needs `--env-file .env` so Django can read your settin
 `uv run pytest` runs every test, including the original 44 TVmaze verification-script tests.
 It needs no `.env` and no network, because the tests use `config.test_settings`, which supplies a
 test-only secret key, and every external HTTP call is mocked.
+
+### Accounts and pages
+
+- Anyone can view the home page (`/`), log in (`/accounts/login/`) and sign up (`/accounts/signup/`).
+  Signing up logs you straight in.
+- Every other page requires login. Anonymous visitors are redirected to the login page and sent
+  back to the page they asked for afterwards.
+- Logging out is a POST request (the icon at the far right of the nav bar), so a plain link
+  can't log you out.
+- The navigation bar has two versions. Visitors see only the wordmark, **Log in** and **Sign up**.
+  Logged-in users see their username, Home, Discover, My Collection, Watching, Completed, search
+  and log out.
+- Every page's footer credits TVmaze and the CC BY-SA 4.0 license.
