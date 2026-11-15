@@ -243,7 +243,7 @@ HTTP.tv only shows information it can verify. It shows a show's original network
   - Every view except home, login and sign-up requires login.
   - Every entry lookup is limited to the requesting user's entries, so other users' entries give 404.
   - All changes use POST with CSRF protection.
-- **Shared card component:** every row and grid uses one card style with the same width rules, a 20 px gap, a 4% hover scale with a white outline and shadow, and a caption of title, status dot with status, and "Season X, Episode Y" or "Not started". Cards for unsaved shows say "Not in your collection" plus genres. A green check appears only in rows that mix saved and unsaved shows.
+- **Shared card component:** every row and grid uses one card style with the same width rules, a 20 px gap, a 4% hover scale with a white outline and shadow, and a caption of title, status dot with status, and "Season X, Episode Y" or "Not started". Cards for unsaved shows say "Not in your collection" plus years and channel (e.g. "2005–2013 · NBC"), falling back to genres, so shows with the same title can be told apart (changed during Phase 3 testing; see evidence log B6). A green check appears only in rows that mix saved and unsaved shows.
 - **Shared query logic:**
   - What the collection page and the API share: owner scoping, status filtering, and ordering, including the nulls-last rating rule. Both use the same code for these, so they behave the same.
   - Rating sorts put unrated entries last in both directions, using explicit nulls-last ordering because SQLite would otherwise put nulls first when sorting ascending.

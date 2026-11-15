@@ -42,6 +42,13 @@ Sections:
 - **Before:** the PRD gave anonymous visitors a welcome hero with a Discover button, but Discover requires login, so a visitor would bounce straight to the login page.
 - **Fix:** logged-out visitors get Sign up and Log in calls to action. Discover appears only for logged-in users with an empty collection (AC26 updated).
 
+### B6 — Same-named search results couldn't be told apart (2026-11-15, Phase 3 manual test)
+- **Before:** a real Discover search for "the office" returned five cards that all read "The Office · Not in your collection · Comedy" (US, UK, Indian, Indian Hindi-language and 1995 versions). Screenshot: `evidence/app-p3-discover-before-identity-fix.png`.
+- **How found:** manual browser testing against live TVmaze. The mocked tests passed, because the sample data had different titles.
+- **Fix:** the third caption line of an unsaved card now shows years and channel, falling back to genres. New filter `identity_line` with tests; PRD shared-card rule updated.
+- **After:** "2005–2013 · NBC", "2001–2003 · BBC Two", "2024 · Prime Video", "2019 · JioHotstar"… Screenshot: `evidence/app-p3-discover-after-identity-fix.png`.
+- **Lesson:** mocked data proves the code paths; only real data reveals what users actually see.
+
 ---
 
 ## 2. Requests and responses
@@ -72,6 +79,9 @@ All taken with headless Microsoft Edge from `prototypes/` during the 2026-11-15 
 | `evidence/app-p2-home-public-phone.png` | Built app: logged-out home at phone width |
 | `evidence/app-p2-home-logged-in.png` | Built app: logged-in nav, empty-collection welcome |
 | `evidence/app-p2-home-logged-in-phone.png` | Built app: icon-only nav at phone width |
+| `evidence/app-p3-discover-before-identity-fix.png` | Discover "the office": identical captions (B6 before) |
+| `evidence/app-p3-discover-after-identity-fix.png` | Discover "the office": years · channel captions (B6 after) |
+| `evidence/app-p3-discover-phone.png` | Discover "severance" at phone width |
 
 ---
 
@@ -104,3 +114,12 @@ Source: each package's official PyPI metadata (`https://pypi.org/pypi/<package>/
 - `uv run pytest -q` → `76 passed` (44 original + 32 new).
 - Browser check (headless Edge driven by Playwright, `demo_user` test account) at 1440×900 and 390×844: no horizontal overflow on any page. The only console error was a `/favicon.ico` 404, fixed by adding an inline SVG icon to the base template.
 - Screenshots: `evidence/app-p2-home-public.png`, `app-p2-signup.png`, `app-p2-home-public-phone.png`, `app-p2-home-logged-in.png`, `app-p2-home-logged-in-phone.png`.
+
+### V4 — TVmaze client and Discover (2026-11-15, Phase 3)
+- `uv run pytest -q` → `114 passed` (44 original + 70 new). Every failure type (timeout, connection, 429, 5xx, other HTTP, invalid JSON, unexpected shape) is tested for the client and the page.
+- Real searches through the running app against live TVmaze:
+  - "the office" → 10 results (the maximum);
+  - "xqzzvvnotashow" → "No shows found";
+  - "café" → 10 results (accented input is URL-encoded correctly);
+  - "   " → guidance with no TVmaze call.
+- `git diff scripts/verify_tvmaze.py tests/test_verify_tvmaze.py` → empty (unchanged).

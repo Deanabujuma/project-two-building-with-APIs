@@ -110,3 +110,12 @@ test-only secret key, and every external HTTP call is mocked.
   Logged-in users see their username, Home, Discover, My Collection, Watching, Completed, search
   and log out.
 - Every page's footer credits TVmaze and the CC BY-SA 4.0 license.
+
+### Discover (searching TVmaze)
+
+`/discover/?q=<title>` searches TVmaze's public API and shows up to 10 shows in TVmaze's relevance
+order. A blank search shows a hint and never calls TVmaze. Timeouts (10 seconds), connection
+problems, rate limiting (HTTP 429) and unreadable responses each show a friendly message instead
+of an error page. All TVmaze requests go through `shows/tvmaze.py`, which sends the generic
+User-Agent `HTTP.tv/0.1`. Unsaved results show years and channel (e.g. "2005–2013 · NBC"), so
+shows with the same title can be told apart.
