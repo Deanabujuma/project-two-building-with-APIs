@@ -133,6 +133,24 @@ GET    20/                                 -> 404 {"detail":"No CollectionEntry 
 ```
 The season-only PATCH shows the merged-values check: the request sent no episode, the saved entry had none, so the final state would break the rule.
 
+### R10–R16 — Search, filters, ordering, pages, invalid values (2026-11-15, Phase 11)
+`GET http://127.0.0.1:8000/api/collection/?…` with `Authorization: Token ****` (19 entries; output trimmed to id, name, status, rating):
+```
+?search=breaking                      -> 200 count=1:  4 Breaking Bad | watching | 5
+?status=watching&min_rating=4         -> 200 count=3:  10 Ted Lasso 4 · 4 Breaking Bad 5 · 2 Severance 4
+?ordering=rating                      -> 200 count=19, page 1 of 2 (12):
+      Chernobyl 1, Succession 2, The Bear 3, Better Call Saul 4, Severance 4, Ted Lasso 4, The Wire 4,
+      Breaking Bad 5, Shōgun 5, The Office 5, Abbott Elementary None, Andor None      <- unrated LAST even ascending
+?ordering=-rating&page_size=5&page=2  -> 200 count=19
+      next=…?ordering=-rating&page=3&page_size=5   previous=…?ordering=-rating&page_size=5
+      Ted Lasso 4, The Wire 4, The Bear 3, Succession 2, Chernobyl 1
+?status=banana                        -> 400 {"status": ["Select a valid choice. banana is not one of the available choices."]}
+?min_rating=9                         -> 400 {"min_rating": ["Ensure this value is less than or equal to 5."]}
+?ordering=notes                       -> 400 {"ordering": ["Unknown ordering 'notes'. Choose from: created_at, rating, show__name,
+                                              show__premiered, show__tvmaze_rating, updated_at."]}
+```
+Ties (several 4-star shows) are broken by show name, the same rule the web page uses.
+
 ---
 
 ## 3. Screenshots
@@ -183,6 +201,7 @@ All taken with headless Microsoft Edge from `prototypes/` during the 2026-11-15 
 | `evidence/app-p8-home-phone.png` | Home at phone width |
 | `evidence/app-p9-api-root.png` | Browsable API root (logged-in session) |
 | `evidence/app-p9-api-collection.png` | Browsable API collection list, paginated |
+| `evidence/app-p11-api-browsable-filters.png` | Browsable API with the Filters button (status=watching, ordering=-rating) |
 
 ---
 
@@ -285,3 +304,12 @@ Source: each package's official PyPI metadata (`https://pypi.org/pypi/<package>/
 - **TDD:** `shows/tests/test_api_write.py` was written first, against the read-only API (`38 failed, 11 passed`; the passing ones were mostly the web-form half of the parity checks). Then the serializer and viewset were implemented: `387 passed`. The parity work then reached `397 passed`.
 - The parity tests run the same 10 invalid cases (AC23) against **both** the web form and the API, comparing the field, the status code (400 for both), that nothing was saved, and the exact message.
 - **Decision:** `PUT` behaves like `PATCH` (every field optional; omitted fields keep their saved values), because all writable fields are optional in the model. Documented in the README.
+
+### V13 — API search, filters, ordering, pagination (2026-11-15, Phase 11)
+- **TDD:** `shows/tests/test_api_query.py` was written first (`43 failed, 8 passed`), then the filters, search and shared ordering were added: `449 passed`.
+- **Test mistakes I made and fixed** (the code was right both times):
+  - a pagination assertion mixed `and`/`or` and could pass for the wrong reason; it was rewritten before implementing;
+  - a combined-filter case expected "Dark" for `search=e`, but "Dark" has no "e".
+- **AC43:** a parametrized test compares the web page and the API for 4 status values × 3 equivalent sorts (12 combinations); they return identical lists.
+- **Decision:** an unknown `ordering` returns 400 (DRF's default silently ignores it), matching the strict filters.
+- **AC44 (manual):** the browsable API's Filters form lists status, minimum rating, genre, show status, network, search and ordering.

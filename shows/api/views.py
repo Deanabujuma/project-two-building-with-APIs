@@ -1,7 +1,9 @@
-from rest_framework import status, viewsets
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, status, viewsets
 from rest_framework.response import Response
 
 from .. import queries, services, tvmaze
+from .filters import CollectionEntryFilter, SharedOrderingFilter
 from .serializers import CollectionEntrySerializer, CreateEntrySerializer
 
 
@@ -13,9 +15,12 @@ class CollectionEntryViewSet(viewsets.ModelViewSet):
     """
 
     serializer_class = CollectionEntrySerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, SharedOrderingFilter]
+    filterset_class = CollectionEntryFilter
+    search_fields = ["show__name", "notes"]  # broader than the web page, which searches titles only
 
     def get_queryset(self):
-        return queries.order_entries(queries.collection_entries(self.request.user))
+        return queries.collection_entries(self.request.user)  # ordered by SharedOrderingFilter
 
     def create(self, request, *args, **kwargs):
         body = CreateEntrySerializer(data=request.data)

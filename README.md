@@ -234,3 +234,26 @@ example, PATCHing only `{"current_season": 2}` onto an entry with no episode ret
 `400 {"current_episode": ["Enter both a season and an episode, or leave both blank."]}`.
 
 Another user's entry, or a missing ID, returns 404. Requests without credentials return 401.
+
+#### Searching, filtering, sorting and paging the API
+
+Add these to `GET /api/collection/` in any combination:
+
+| Parameter | Example | Meaning |
+|---|---|---|
+| `search` | `search=goats` | show name **or notes** contain the text (the web page's `q` searches titles only) |
+| `status` | `status=watching` | one of `plan_to_watch`, `watching`, `on_hold`, `completed`, `dropped` |
+| `min_rating` | `min_rating=4` | your rating is at least this (1–5) |
+| `genre` | `genre=comedy` | genres contain the text (case-insensitive) |
+| `show_status` | `show_status=ended` | TVmaze status matches exactly (case-insensitive), e.g. Running, Ended |
+| `network` | `network=hbo` | network or web channel name contains the text |
+| `ordering` | `ordering=-rating` | `updated_at` (default `-updated_at`), `created_at`, `show__name`, `rating`, `show__premiered`, `show__tvmaze_rating`; prefix `-` for descending |
+| `page`, `page_size` | `page=2&page_size=25` | 12 per page by default, at most 50 |
+
+Unrated entries (and shows without a TVmaze rating or premiere date) always sort **last**, in
+both directions. Invalid values such as `status=banana`, `min_rating=9` or `ordering=notes`
+return 400 with a message. Example:
+
+```
+curl "http://127.0.0.1:8000/api/collection/?status=watching&min_rating=4&ordering=-rating"      -H "Authorization: Token $HTTPTV_API_TOKEN"
+```
