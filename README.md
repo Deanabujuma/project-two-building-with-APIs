@@ -119,3 +119,17 @@ problems, rate limiting (HTTP 429) and unreadable responses each show a friendly
 of an error page. All TVmaze requests go through `shows/tvmaze.py`, which sends the generic
 User-Agent `HTTP.tv/0.1`. Unsaved results show years and channel (e.g. "2005–2013 · NBC"), so
 shows with the same title can be told apart.
+
+### Data model
+
+- **Show:** one row per TVmaze show, shared by all users and keyed by the unique `tvmaze_id`. It
+  stores TVmaze facts: name, links, poster and backdrop URLs, dates, status, genres, plain-text
+  summary, original network or web channel (with type and country), runtime, TVmaze rating,
+  language and type. Images are linked from TVmaze, never downloaded.
+- **CollectionEntry:** one user's tracking of one show: status (Plan to Watch by default,
+  Watching, On Hold, Completed or Dropped), current season and episode, a 1–5 rating, notes of up
+  to 2,000 characters, and created/updated times. A user can save each show only once (a
+  database constraint). Deleting a user deletes their entries; a show that is still in someone's
+  collection can't be deleted.
+- Both models are in the Django admin (`/admin/`) with search and filters, for inspecting data
+  while developing.

@@ -123,3 +123,7 @@ Source: each package's official PyPI metadata (`https://pypi.org/pypi/<package>/
   - "café" → 10 results (accented input is URL-encoded correctly);
   - "   " → guidance with no TVmaze call.
 - `git diff scripts/verify_tvmaze.py tests/test_verify_tvmaze.py` → empty (unchanged).
+
+### V5 — Data models (2026-11-15, Phase 4a)
+- `makemigrations shows` → `0001_initial` (Show, CollectionEntry); `migrate` applied cleanly. pytest also builds its test database from the migrations on every run.
+- `uv run pytest -q` → `126 passed`: defaults, the unique (user, show) constraint, unique `tvmaze_id`, cascade on user delete, protect on show delete, and admin list/add/search pages.
