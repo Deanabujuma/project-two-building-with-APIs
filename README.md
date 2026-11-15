@@ -201,3 +201,26 @@ updated **Watching** entry; if there is none, the most recently updated entry). 
 rows of their own shows: **Continue Tracking**, **My Watchlist**, **Recently Added** (newest 10
 saves of any status) and **Completed Shows**. Empty rows are hidden. With an empty collection,
 the page shows a welcome hero with a **Discover shows** button.
+
+### REST API
+
+All endpoints are under `/api/` and require authentication, **except** the token endpoint.
+Show data in responses comes from TVmaze (CC BY-SA 4.0).
+
+- **Token (for scripts):** send your username and password once to get your token:
+
+  ```
+  curl -X POST http://127.0.0.1:8000/api/auth/token/ -H "Content-Type: application/json"        -d '{"username": "YOUR_USERNAME", "password": "YOUR_PASSWORD"}'
+  ```
+
+  Put the returned token in `.env` as `HTTPTV_API_TOKEN` (never commit it). Then send it as
+  `Authorization: Token <your token>`.
+- **Browser:** while logged in to the site, open http://127.0.0.1:8000/api/ to use DRF's
+  browsable API with your session.
+
+| Method and path | What it does |
+|---|---|
+| `GET /api/collection/` | list your entries (paginated: `count`, `next`, `previous`, `results`) |
+| `GET /api/collection/<id>/` | one entry, with nested read-only `show` data |
+
+Another user's entry, or a missing ID, returns 404. Requests without credentials return 401.

@@ -83,7 +83,35 @@ Sections:
 
 ## 2. Requests and responses
 
-*(Captured from the running app in Phases 9, 11 and 12.)*
+Captured from the running dev server (`127.0.0.1:8000`) as `demo_user`. Tokens are shown as `****`; passwords are never recorded.
+
+### R1 — No credentials → 401 (2026-11-15, Phase 9)
+```
+$ curl -i http://127.0.0.1:8000/api/collection/
+HTTP/1.1 401 Unauthorized
+WWW-Authenticate: Token
+{"detail":"Authentication credentials were not provided."}
+```
+
+### R2 — Getting a token (2026-11-15, Phase 9)
+```
+$ curl -X POST http://127.0.0.1:8000/api/auth/token/ -H "Content-Type: application/json"        -d '{"username": "demo_user", "password": "****"}'
+{"token":"****"}          (a 40-character key, saved only in the Git-ignored .env as HTTPTV_API_TOKEN)
+```
+
+### R3 — Authenticated list, two per page (2026-11-15, Phase 9)
+```
+$ curl -i "http://127.0.0.1:8000/api/collection/?page_size=2" -H "Authorization: Token ****"
+HTTP/1.1 200 OK
+Allow: GET, HEAD, OPTIONS
+Content-Type: application/json
+
+{"count":19,"next":"http://127.0.0.1:8000/api/collection/?page=2&page_size=2","previous":null,
+ "results":[{"id":17,"show":{"tvmaze_id":179,"name":"The Wire","tvmaze_url":"https://www.tvmaze.com/shows/179/the-wire",
+   ...,"network":"HBO","channel_type":"network","channel_country":"United States","runtime":60,"tvmaze_rating":"8.9",...},
+   "status":"completed","current_season":5,"current_episode":10,"rating":4,"notes":"", "created_at":"...","updated_at":"..."}, ...]}
+```
+(Show summary and timestamps shortened with `...`. `Allow: GET, HEAD, OPTIONS` shows the read-only Phase 9 endpoint.)
 
 ---
 
@@ -133,6 +161,8 @@ All taken with headless Microsoft Edge from `prototypes/` during the 2026-11-15 
 | `evidence/app-p7-collection-phone.png` | Collection at phone width; chips scroll inside their row |
 | `evidence/app-p8-home.png` | Personalized home: featured hero (Dark) and four rows with consistent cards |
 | `evidence/app-p8-home-phone.png` | Home at phone width |
+| `evidence/app-p9-api-root.png` | Browsable API root (logged-in session) |
+| `evidence/app-p9-api-collection.png` | Browsable API collection list, paginated |
 
 ---
 
@@ -225,3 +255,8 @@ Source: each package's official PyPI metadata (`https://pypi.org/pypi/<package>/
 - `uv run pytest -q` → `318 passed`.
 - **One test-setup mistake:** my rendering test assumed the first-saved Watching entry would be featured, but the most recently *updated* one (saved last) correctly was. The template was right; the test setup was fixed by updating the intended entry first.
 - **AC32 (manual):** across all four rows, Discover, Suggested and the collection grid, cards share the 20 px gap, the 4% hover, and the title / status / "Season X, Episode Y" caption. Check marks appear only in mixed rows (Discover, Suggested).
+
+### V11 — API authentication and read access (2026-11-15, Phase 9)
+- `uv run pytest -q` → `338 passed`.
+- Pagination (`count`/`next`/`previous`/`results`, 12 by default, max 50) was switched on in this phase rather than Phase 11, so the list format never changes for clients. Phase 11 tests the size rules.
+- Real requests R1–R3 above; browsable API checked in a logged-in browser.
