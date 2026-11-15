@@ -222,5 +222,15 @@ Show data in responses comes from TVmaze (CC BY-SA 4.0).
 |---|---|
 | `GET /api/collection/` | list your entries (paginated: `count`, `next`, `previous`, `results`) |
 | `GET /api/collection/<id>/` | one entry, with nested read-only `show` data |
+| `POST /api/collection/` | add a show: body `{"tvmaze_id": 169}`. 201 with the new entry; 400 if it's already saved or TVmaze has no such ID; 503 if TVmaze is unavailable |
+| `PATCH /api/collection/<id>/` | change any of `status`, `current_season`, `current_episode`, `rating`, `notes` |
+| `PUT /api/collection/<id>/` | same as PATCH (all fields optional; omitted fields keep their values) |
+| `DELETE /api/collection/<id>/` | remove the entry (204); the show stays for other users |
+
+`id`, `show`, `created_at` and `updated_at` are read-only and ignored if sent. An entry's show
+can't be changed (sending `tvmaze_id` on PATCH/PUT returns 400). Updates use the **same
+validation and messages as the web form**, checked against the entry's final values. For
+example, PATCHing only `{"current_season": 2}` onto an entry with no episode returns
+`400 {"current_episode": ["Enter both a season and an episode, or leave both blank."]}`.
 
 Another user's entry, or a missing ID, returns 404. Requests without credentials return 401.

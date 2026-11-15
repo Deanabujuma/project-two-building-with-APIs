@@ -79,6 +79,11 @@ Sections:
 - **Fix:** removed the duplicate range validators from the model fields, so the shared rules (plus the database constraints) are the single source. The filter is kept for a related case: a rejected Season no longer also triggers a misleading "enter both" error on Episode (`test_rejected_season_does_not_also_claim_episode_is_missing`). Result: `270 passed`.
 - **Lesson:** inspect the actual data before fixing; my first fix addressed a cause that wasn't there.
 
+### B12 — API and web form disagreed on two error messages (2026-11-15, Phase 10, found by a parity test)
+- **Before:** the first parity test only checked that both reject each case. A stricter test comparing the exact messages, `test_api_and_web_messages_match_for_every_case`, failed for "notes too long": the API said "(you entered 2,001)", the web form "(you entered 2001)". (Text input like "two" also differed until the serializer was given the shared wording.)
+- **Cause:** the web form's built-in length check ran before the shared rule and used its own formatting.
+- **Fix:** removed the form's duplicate length check; the shared rule produces the message in both places. The textarea's `maxlength` attribute still limits typing. Result: `1 failed, 396 passed` → `397 passed`.
+
 ---
 
 ## 2. Requests and responses
@@ -112,6 +117,21 @@ Content-Type: application/json
    "status":"completed","current_season":5,"current_episode":10,"rating":4,"notes":"", "created_at":"...","updated_at":"..."}, ...]}
 ```
 (Show summary and timestamps shortened with `...`. `Allow: GET, HEAD, OPTIONS` shows the read-only Phase 9 endpoint.)
+
+### R4–R9 — Create, validate, update, delete (2026-11-15, Phase 10)
+All requests are sent with `-H "Authorization: Token ****" -H "Content-Type: application/json"` to `http://127.0.0.1:8000/api/collection/`.
+```
+POST   {"tvmaze_id": 6508}                 -> 201 Created, Location: .../api/collection/20/
+                                              show "Atlanta" (FX, fetched from TVmaze), status plan_to_watch, progress null/null
+POST   {"tvmaze_id": 6508}  (again)        -> 400 {"tvmaze_id":["Atlanta is already in your collection."]}
+PATCH  20/ {"current_season": 2}           -> 400 {"current_episode":["Enter both a season and an episode, or leave both blank."]}
+PATCH  20/ {"status":"watching","current_season":1,"current_episode":3,"rating":4}
+                                           -> 200, entry 20: Atlanta watching 1 3 4
+POST   {"tvmaze_id": 999999999}            -> 400 {"tvmaze_id":["TVmaze has no show with that ID."]}
+DELETE 20/                                 -> 204 No Content
+GET    20/                                 -> 404 {"detail":"No CollectionEntry matches the given query."}
+```
+The season-only PATCH shows the merged-values check: the request sent no episode, the saved entry had none, so the final state would break the rule.
 
 ---
 
@@ -260,3 +280,8 @@ Source: each package's official PyPI metadata (`https://pypi.org/pypi/<package>/
 - `uv run pytest -q` → `338 passed`.
 - Pagination (`count`/`next`/`previous`/`results`, 12 by default, max 50) was switched on in this phase rather than Phase 11, so the list format never changes for clients. Phase 11 tests the size rules.
 - Real requests R1–R3 above; browsable API checked in a logged-in browser.
+
+### V12 — API create/update/delete (2026-11-15, Phase 10)
+- **TDD:** `shows/tests/test_api_write.py` was written first, against the read-only API (`38 failed, 11 passed`; the passing ones were mostly the web-form half of the parity checks). Then the serializer and viewset were implemented: `387 passed`. The parity work then reached `397 passed`.
+- The parity tests run the same 10 invalid cases (AC23) against **both** the web form and the API, comparing the field, the status code (400 for both), that nothing was saved, and the exact message.
+- **Decision:** `PUT` behaves like `PATCH` (every field optional; omitted fields keep their saved values), because all writable fields are optional in the model. Documented in the README.

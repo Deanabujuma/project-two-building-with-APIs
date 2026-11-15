@@ -1,4 +1,5 @@
 from django import forms
+from django.core.validators import MaxLengthValidator
 
 from .models import CollectionEntry
 from .validation import NOTES_MAX_LENGTH
@@ -25,8 +26,15 @@ class TrackingForm(forms.ModelForm):
             "current_episode": {key: "Episode must be a whole number of 1 or more." for key in ("invalid", "min_value")},
             "rating": {key: "Rating must be a whole number from 1 to 5, or blank."
                        for key in ("invalid", "min_value", "max_value")},
-            "notes": {"max_length": "Notes can be at most 2,000 characters (you entered %(show_value)s)."},
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # The 2,000-character limit is checked by the shared rules (same message as the API).
+        # The textarea's maxlength attribute still stops browsers from typing more.
+        notes = self.fields["notes"]
+        notes.max_length = None
+        notes.validators = [v for v in notes.validators if not isinstance(v, MaxLengthValidator)]
 
     PROGRESS_FIELDS = ("current_season", "current_episode")
 
