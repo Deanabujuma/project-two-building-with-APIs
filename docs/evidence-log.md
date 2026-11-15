@@ -390,6 +390,26 @@ Source: each package's official PyPI metadata (`https://pypi.org/pypi/<package>/
   - Result: `485 passed`.
 - **Note:** with `DJANGO_DEBUG=true` (local development), an unknown URL shows Django's yellow debug 404 page rather than the custom `404.html`. That's standard Django behaviour; the test above checks the custom page with debug off.
 
+### V16 — PRD acceptance-criteria audit before pushing (2026-11-15, after Phase 13)
+Every one of the 57 criteria in `prd/httptv.md` (AC1–AC54, with AC5a, AC5b and AC15a) was checked against a test or recorded evidence:
+
+| Kind | Criteria | Where |
+|---|---|---|
+| Tests (T) | AC2, AC4–AC20, AC23–AC31, AC33–AC43, AC45–AC48, AC52, AC53 | test files (most name their AC in the test or docstring); `uv run pytest` → `485 passed` |
+| Test + manual (T/M) | AC22, AC50 | `test_show_detail.py` (no invented providers, ratings or badges); `test_attribution.py`; V15 |
+| Manual (M) | AC1, AC3 | V15 (fresh clone, `git ls-files` audit) |
+| Manual (M) | AC21, AC32 | V4–V8 screenshots; Design Defense table below |
+| Manual (M) | AC44 | V13, `app-p11-api-browsable-filters.png` |
+| Manual (M) | AC49 | R17, plus the web check below |
+| Manual (M) | AC51 | README sections listed in Phase 13 |
+| Manual (M) | AC54 | REFLECTION.md, Phase 14 (pending your review) |
+
+- **AC49, completed now:** R17 showed the client's own output but hadn't checked the web app.
+  - `next 2` → "Season 2, Episode 3 -> Season 2, Episode 4"; `update 2 --notes "Changed from the command-line client."`.
+  - In the browser, My Collection then showed "Severance · Watching · Season 2, Episode 4", and the tracking form's notes counter read "37 / 2,000", the length of that note.
+  - The sample entry was restored afterwards.
+- **Interpretation to note:** AC45 asks for a "numbered table". The client's table is numbered by entry **ID** (the number `update` and `next` take) rather than a 1, 2, 3 row count, so the number you see is the one you type next.
+
 ## 5. Design Defense: prototype → built app
 
 | View | Prototype | Built app |
