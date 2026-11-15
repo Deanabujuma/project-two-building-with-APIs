@@ -126,6 +126,11 @@ All taken with headless Microsoft Edge from `prototypes/` during the 2026-11-15 
 | `evidence/app-p6-tracking-saved.png` | Tracking saved: Watching · Season 2, Episode 3, 4 of 5, notes |
 | `evidence/app-p6-delete-confirm.png` | Remove confirmation page |
 | `evidence/app-p6-tracking-phone.png` | Tracking panels stacked at phone width |
+| `evidence/app-p7-collection.png` | My Collection: 19 real shows, chips with counts, stars |
+| `evidence/app-p7-collection-page2.png` | Page 2 of 2 (12 per page) |
+| `evidence/app-p7-watching.png` | Watching nav link: filtered page with its own title |
+| `evidence/app-p7-no-match.png` | `q=goats`: title-only search, no-match state with Clear filters |
+| `evidence/app-p7-collection-phone.png` | Collection at phone width; chips scroll inside their row |
 
 ---
 
@@ -201,3 +206,15 @@ Source: each package's official PyPI metadata (`https://pypi.org/pypi/<package>/
   - then Episode 3 and 4 stars → "Saved your tracking for Severance.", header "Watching · Season 2, Episode 3";
   - Remove → confirmation page; nothing deleted on GET.
 - While scripting the browser check, clicking the hidden radio input itself failed (the 1 px inputs were stacked on top of each other). Real users click the star labels. The inputs are now anchored inside the star group with `pointer-events: none`.
+
+### V9 — My Collection with shared query logic (2026-11-15, Phase 7)
+- **TDD:** `shows/tests/test_queries.py` was written before `shows/queries.py` existed (collection error → red), then implemented (`18 passed`). It covers unrated-last for `rating` **and** `-rating`, and missing values last for TVmaze rating and premiere date in both directions, case-insensitive titles, stable tie-breaks, and rejection of unknown ordering fields.
+- **Small decision beyond the PRD:** missing premiere dates also sort last in both directions (the PRD named only the two rating fields).
+- `uv run pytest -q` → `308 passed`.
+- **Demo data:** 16 more real shows were saved through the real save service (live TVmaze, paced at 0.6 s per call). Their tracking values were then set by hand for the demo account. That data is invented sample data in the Git-ignored local database.
+- **Browser:**
+  - chips All 19 / Plan to Watch 5 / Watching 5 / On Hold 2 / Completed 5 / Dropped 2;
+  - pages 1–2;
+  - `sort=-rating` lists 5-star shows first and unrated last;
+  - `status=watching` shows the "Watching" title;
+  - `q=goats` → "No shows match" (titles only).

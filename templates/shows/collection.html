@@ -1,10 +1,59 @@
 {% extends "base.html" %}
-{% block title %}My Collection · HTTP.tv{% endblock %}
+{% block title %}{{ page_title }} · HTTP.tv{% endblock %}
 {% block content %}
-<div class="page-top px-edge">
-  <h1 class="page-title mb-1">My Collection</h1>
-  <div class="empty-state"><i class="bi bi-collection"></i><h2 class="h4 mt-3">Your collection is empty</h2>
-    <p class="muted">Search TVmaze to find shows and save them here.</p>
-    <a class="btn-pill btn-white mt-2" href="{% url 'shows:discover' %}"><i class="bi bi-search"></i>Discover shows</a></div>
+<div class="page-top">
+  {% with first=page.object_list.0 %}{% if first and first.show.background_url %}<div class="page-glow" style="background-image:url('{{ first.show.background_url }}')"></div>{% endif %}{% endwith %}
+  <div class="px-edge" style="position:relative">
+    <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
+      <div>
+        <h1 class="page-title mb-1">{{ page_title }}</h1>
+        <div class="muted" data-summary>{{ total_saved }} show{{ total_saved|pluralize }} saved · {{ page.paginator.count }} shown</div>
+      </div>
+      <form class="toolbar d-flex flex-wrap gap-2" method="get" action="{% url 'shows:collection' %}" role="search">
+        {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
+        <input class="form-control" style="width:min(260px,100%)" name="q" type="search" placeholder="Search my shows by title" value="{{ q }}" aria-label="Search my shows by title">
+        <select class="form-select" style="width:auto" name="sort" aria-label="Sort by" onchange="this.form.submit()">
+          {% for key, label in sorts %}<option value="{{ key }}" {% if key == sort %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+        <noscript><button class="btn-pill btn-ghost btn-sm-pill" type="submit">Apply</button></noscript>
+      </form>
+    </div>
+
+    <nav class="chips mb-4" aria-label="Filter by status">
+      {% for chip in chips %}
+        <a class="chip {% if chip.value == status %}active{% endif %}" href="{{ chip.url }}" data-chip="{{ chip.value|default:'all' }}" {% if chip.value == status %}aria-current="true"{% endif %}>
+          {% if chip.value %}<span class="sdot st-{{ chip.value }}"></span>{% endif %}{{ chip.label }}<span class="n">{{ chip.count }}</span>
+        </a>
+      {% endfor %}
+    </nav>
+
+    {% if not total_saved %}
+      <div class="empty-state" data-state="empty"><i class="bi bi-collection"></i><h2 class="h4 mt-3">Your collection is empty</h2>
+        <p class="muted">Search TVmaze to find shows and save them here.</p>
+        <a class="btn-pill btn-white mt-2" href="{% url 'shows:discover' %}"><i class="bi bi-search"></i>Discover shows</a></div>
+    {% elif not page.object_list %}
+      <div class="empty-state" data-state="no-match"><i class="bi bi-search"></i><h2 class="h5 mt-3">No shows match</h2>
+        <p class="muted">{% if q %}Nothing titled “{{ q }}”{% else %}Nothing{% endif %} in {% if status %}{{ status_label }}{% else %}your collection{% endif %}.</p>
+        <a class="muted text-decoration-underline" href="{{ clear_url }}">Clear filters</a></div>
+    {% else %}
+      <div class="poster-grid" data-state="results">
+        {% for entry in page.object_list %}
+          <a class="pcard" href="{% url 'shows:detail' entry.show.tvmaze_id %}?tab=tracking" data-entry="{{ entry.pk }}">
+            {% include "includes/show_card.html" with show=entry.show entry=entry cta="UPDATE TRACKING" %}
+            <div class="mt-1">{% include "includes/stars.html" with rating=entry.rating %}</div>
+          </a>
+        {% endfor %}
+      </div>
+      {% if page.paginator.num_pages > 1 %}
+        <nav class="pager" aria-label="Pages">
+          {% if prev_url %}<a href="{{ prev_url }}" aria-label="Previous page">‹</a>{% else %}<span class="off">‹</span>{% endif %}
+          {% for number, url in page_links %}
+            {% if number == page.number %}<span class="cur" aria-current="page">{{ number }}</span>{% else %}<a href="{{ url }}">{{ number }}</a>{% endif %}
+          {% endfor %}
+          {% if next_url %}<a href="{{ next_url }}" aria-label="Next page">›</a>{% else %}<span class="off">›</span>{% endif %}
+        </nav>
+      {% endif %}
+    {% endif %}
+  </div>
 </div>
 {% endblock %}

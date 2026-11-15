@@ -1,0 +1,1 @@
+{% if rating %}<span class="stars" aria-label="{{ rating }} of 5 stars">{% for n in "12345" %}{% if forloop.counter <= rating %}★{% else %}<span class="off">★</span>{% endif %}{% endfor %}</span>{% else %}<span class="dim" style="font-size:.78rem">Not rated</span>{% endif %}

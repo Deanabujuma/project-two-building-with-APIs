@@ -1,12 +1,16 @@
+from urllib.parse import urlencode
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.db.models import Count
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
-from . import services, tvmaze
+from . import queries, services, tvmaze
 from .forms import TrackingForm
 from .models import CollectionEntry, Show
 
@@ -174,7 +178,67 @@ def delete_entry(request, entry_id):
     return render(request, "shows/confirm_delete.html", {"entry": entry, "show": entry.show})
 
 
+COLLECTION_PAGE_SIZE = 12
+
+# Web sort options -> the shared ordering values the API also accepts.
+WEB_SORTS = [
+    ("-updated", "Recently updated", "-updated_at"),
+    ("title", "Title (A–Z)", "show__name"),
+    ("-rating", "My rating (high–low)", "-rating"),
+]
+DEFAULT_SORT = "-updated"
+
+
 @login_required
 def collection(request):
-    """The user's collection (full filters, sorting and pagination come in Phase 7)."""
-    return render(request, "shows/collection.html")
+    """My Collection: status chips, title search, sort and 12-per-page pagination.
+
+    Every option lives in the URL, so a view can be bookmarked. Owner scoping, the status
+    filter and ordering come from shows.queries, the same code the API uses.
+    """
+    status_values = {value for value, _ in CollectionEntry.Status.choices}
+    status = request.GET.get("status", "")
+    status = status if status in status_values else ""
+    q = request.GET.get("q", "").strip()
+    sort = request.GET.get("sort", DEFAULT_SORT)
+    sort_map = {key: ordering for key, _, ordering in WEB_SORTS}
+    sort = sort if sort in sort_map else DEFAULT_SORT
+
+    entries = queries.collection_entries(request.user, status)
+    if q:
+        entries = entries.filter(show__name__icontains=q)  # titles only; the API also searches notes
+    entries = queries.order_entries(entries, sort_map[sort])
+    page = Paginator(entries, COLLECTION_PAGE_SIZE).get_page(request.GET.get("page"))
+
+    counts = dict(CollectionEntry.objects.filter(user=request.user).values_list("status").annotate(n=Count("pk")))
+    total_saved = sum(counts.values())
+
+    def url_with(**changes):
+        """This page's URL with some parameters changed; empty and default values are left out."""
+        params = {"status": status, "q": q, "sort": sort, **changes}
+        if params["sort"] == DEFAULT_SORT:
+            params["sort"] = ""
+        query = urlencode({key: value for key, value in params.items() if value})
+        return reverse("shows:collection") + (f"?{query}" if query else "")
+
+    chips = [{"value": "", "label": "All", "count": total_saved, "url": url_with(status="")}]
+    chips += [{"value": value, "label": label, "count": counts.get(value, 0), "url": url_with(status=value)}
+              for value, label in CollectionEntry.Status.choices]
+
+    titles = {"watching": "Watching", "completed": "Completed"}
+    context = {
+        "page": page,
+        "chips": chips,
+        "status": status,
+        "status_label": dict(CollectionEntry.Status.choices).get(status, ""),
+        "q": q,
+        "sort": sort,
+        "sorts": [(key, label) for key, label, _ in WEB_SORTS],
+        "total_saved": total_saved,
+        "page_title": titles.get(status, "My Collection"),
+        "page_links": [(number, url_with(page=number)) for number in page.paginator.page_range],
+        "prev_url": url_with(page=page.previous_page_number()) if page.has_previous() else "",
+        "next_url": url_with(page=page.next_page_number()) if page.has_next() else "",
+        "clear_url": reverse("shows:collection"),
+    }
+    return render(request, "shows/collection.html", context)

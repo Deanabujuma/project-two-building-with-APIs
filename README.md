@@ -177,3 +177,19 @@ form, the admin, the API, and as database check constraints:
 Invalid input is shown again with a message under the field, and nothing is saved. **Remove**
 opens a confirmation page (`/collection/<id>/delete/`); confirming deletes only your tracking,
 and the show stays on HTTP.tv for other users. Another user's entry URLs return 404.
+
+### My Collection
+
+`/collection/` shows your saved shows, 12 per page. Everything is controlled by URL parameters,
+so any view can be bookmarked:
+
+| Parameter | Values | Meaning |
+|---|---|---|
+| `status` | `plan_to_watch`, `watching`, `on_hold`, `completed`, `dropped` | show one status (the Watching and Completed nav links use this) |
+| `q` | any text | show **titles** containing the text (case-insensitive). Notes are *not* searched here; the API's `search` does search notes |
+| `sort` | `-updated` (default), `title`, `-rating` | recently updated, title A–Z, or your rating high–low |
+| `page` | 1, 2, … | out-of-range values show the nearest valid page |
+
+Unrated shows always sort after rated ones. The owner scoping, status filter and ordering come
+from `shows/queries.py`, the same code the API uses, so both list the same entries in the same
+order.
