@@ -49,3 +49,18 @@ def identity_line(show):
     """
     parts = [part for part in (years(show), _field(show, "network")) if part]
     return " · ".join(parts) or (_field(show, "genres") or "")
+
+
+@register.filter
+def channel_initials(name):
+    """Up to three initials for the channel badge, e.g. "Apple TV+" -> "AT"."""
+    words = "".join(ch for ch in (name or "") if ch.isalnum() or ch == " ").split()
+    return "".join(word[0] for word in words)[:3].upper()
+
+
+@register.filter
+def tvmaze_rating_text(value):
+    """7.9 -> "7.9" (Decimal or float), "" when missing."""
+    if value in (None, ""):
+        return ""
+    return f"{float(value):.1f}"

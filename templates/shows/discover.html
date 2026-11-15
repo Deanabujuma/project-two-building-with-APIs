@@ -17,11 +17,21 @@
     {% if results %}
       <div class="muted mb-3">{{ results|length }} result{{ results|length|pluralize }} for “{{ query }}”</div>
       <div class="poster-grid" data-state="results">
-        {% for show in results %}
-          <div class="pcard position-relative" data-tvmaze-id="{{ show.tvmaze_id }}">
-            {% include "includes/show_card.html" with show=show %}
+        {% for result in results %}{% with show=result.show entry=result.entry %}
+          <div class="pcard position-relative" data-tvmaze-id="{{ show.tvmaze_id }}" {% if entry %}data-saved="1"{% endif %}>
+            {% if entry %}
+              <a class="result-add saved" href="{% url 'shows:detail' show.tvmaze_id %}?tab=tracking" title="In your collection" aria-label="{{ show.name }} is in your collection"><i class="bi bi-check-lg"></i></a>
+            {% else %}
+              <form class="result-add-form" method="post" action="{% url 'shows:add' %}">
+                {% csrf_token %}
+                <input type="hidden" name="tvmaze_id" value="{{ show.tvmaze_id }}">
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button class="result-add" type="submit" title="Add to collection" aria-label="Add {{ show.name }} to collection"><i class="bi bi-plus-lg"></i></button>
+              </form>
+            {% endif %}
+            <a href="{% url 'shows:detail' show.tvmaze_id %}">{% include "includes/show_card.html" %}</a>
           </div>
-        {% endfor %}
+        {% endwith %}{% endfor %}
       </div>
     {% else %}
       <div class="empty-state" data-state="no-results"><i class="bi bi-emoji-neutral"></i>

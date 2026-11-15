@@ -49,6 +49,12 @@ Sections:
 - **After:** "2005–2013 · NBC", "2001–2003 · BBC Two", "2024 · Prime Video", "2019 · JioHotstar"… Screenshot: `evidence/app-p3-discover-after-identity-fix.png`.
 - **Lesson:** mocked data proves the code paths; only real data reveals what users actually see.
 
+### B7 — Fallback poster hidden behind the summary panel (2026-11-15, Phase 4b manual test)
+- **Before:** for a show with no backdrop ≥1920 px (The Naked Office, TVmaze 36116), the fallback poster was absolutely positioned at the hero's bottom right, the same spot as the details page's summary panel, so the panel covered most of it. Screenshot: `evidence/app-p4-poster-fallback-before-fix.png`. The prototype's "Missing backdrop" toggle has the same overlap; it had only been reviewed on the home hero.
+- **How found:** saving a real show without a qualifying backdrop and looking at the page.
+- **Fix:** on the details page the poster is now part of the right-hand column's normal layout, above the summary, so it can't overlap. It's hidden under the large breakpoint, where the blurred poster background remains. Two tests cover the fallback and backdrop cases.
+- **After:** `evidence/app-p4-poster-fallback-after-fix.png`.
+
 ---
 
 ## 2. Requests and responses
@@ -82,6 +88,11 @@ All taken with headless Microsoft Edge from `prototypes/` during the 2026-11-15 
 | `evidence/app-p3-discover-before-identity-fix.png` | Discover "the office": identical captions (B6 before) |
 | `evidence/app-p3-discover-after-identity-fix.png` | Discover "the office": years · channel captions (B6 after) |
 | `evidence/app-p3-discover-phone.png` | Discover "severance" at phone width |
+| `evidence/app-p4-abbott-saved.png` | Saved Abbott Elementary: network, backdrop, flash message |
+| `evidence/app-p4-severance-baked-title.png` | Severance: the automatic backdrop has the title printed in the art (known limitation) |
+| `evidence/app-p4-severance-phone.png` | Severance details stacked at phone width |
+| `evidence/app-p4-poster-fallback-before-fix.png` | No-backdrop show: poster covered by the summary (B7 before) |
+| `evidence/app-p4-poster-fallback-after-fix.png` | No-backdrop show: poster above the summary (B7 after) |
 
 ---
 
@@ -127,3 +138,16 @@ Source: each package's official PyPI metadata (`https://pypi.org/pypi/<package>/
 ### V5 — Data models (2026-11-15, Phase 4a)
 - `makemigrations shows` → `0001_initial` (Show, CollectionEntry); `migrate` applied cleanly. pytest also builds its test database from the migrations on every run.
 - `uv run pytest -q` → `126 passed`: defaults, the unique (user, show) constraint, unique `tvmaze_id`, cascade on user delete, protect on show delete, and admin list/add/search pages.
+
+### V6 — Secure save flow with real TVmaze data (2026-11-15, Phase 4b)
+- `uv run pytest -q` → `167 passed`.
+- Saved three real shows from Discover with the `+` button, as `demo_user`. Rows stored (checked in the Django shell):
+
+  | TVmaze ID | Show | `network` | `channel_type` | `channel_country` | Backdrop |
+  |---|---|---|---|---|---|
+  | 55350 | Abbott Elementary | ABC | network | United States | `original_untouched/381/953579.jpg` |
+  | 44933 | Severance | Apple TV | web channel | (blank) | `original_untouched/384/960581.jpg` |
+  | 36116 | The Naked Office | Channel One | network | United Kingdom | none (poster fallback) |
+
+- **Known limitation confirmed:** the automatic rule picked a Severance backdrop with "Severance" printed in the artwork (`evidence/app-p4-severance-baked-title.png`), as predicted in B1 and accepted in design decision 14.
+- Discover then showed Severance's card as "Plan to Watch · Not started" with the green check instead of `+`.

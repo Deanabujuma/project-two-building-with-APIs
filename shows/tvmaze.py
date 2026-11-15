@@ -155,3 +155,12 @@ def search_shows(term):
             raise _unreadable()
         shows.append(map_show(item.get("show")))
     return shows
+
+
+def get_show(tvmaze_id):
+    """Fetch one show with its images embedded (one request) and return mapped fields.
+
+    Raises ShowNotFound for an unknown ID, or TVmazeError for any other problem.
+    """
+    data = _get(f"/shows/{int(tvmaze_id)}", {"embed[]": ["images"]})
+    return map_show(data)

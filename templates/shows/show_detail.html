@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% load show_display %}
+{% block title %}{{ show.name }} · HTTP.tv{% endblock %}
+{% block content %}
+<section class="hero detail-hero {% if not show.background_url %}hero--poster{% endif %}">
+  {% if show.background_url %}
+    <div class="hero-bg" style="background-image:url('{{ show.background_url }}')"></div>
+  {% else %}
+    <div class="hero-bg" {% if show.image_url %}style="background-image:url('{{ show.image_url }}')"{% endif %}></div>
+  {% endif %}
+  <div class="hero-shade"></div>
+  <div class="hero-content px-edge"><div class="row g-4 align-items-end">
+    <div class="col-lg-6">
+      {% if entry %}<div class="eyebrow" data-eyebrow><span class="sdot st-{{ entry.status }} me-2"></span>{{ entry.get_status_display }} · {{ entry.progress_text }}</div>{% endif %}
+      <h1 class="hero-title">{{ show.name }}</h1>
+      <div class="badges">
+        {% if show.show_status %}<span class="mbadge solid">{{ show.show_status|upper }}</span>{% endif %}
+        {% if show.show_type %}<span class="mbadge">{{ show.show_type|upper }}</span>{% endif %}
+        {% if show.runtime %}<span class="mbadge"><i class="bi bi-clock"></i>{{ show.runtime }} MIN</span>{% endif %}
+        {% if show.language %}<span class="mbadge">{{ show.language|upper }}</span>{% endif %}
+        {% if show.tvmaze_rating %}<span class="mbadge"><i class="bi bi-star-fill"></i>{{ show.tvmaze_rating|tvmaze_rating_text }} TVMAZE</span>{% endif %}
+      </div>
+      <div class="hero-meta">{% with y=show|years %}{% if y %}{{ y }}{% endif %}{% if y and show.genres %}<span class="dot">•</span>{% endif %}{% endwith %}{{ show.genres }}</div>
+      <div class="d-flex flex-wrap gap-3 mb-4">
+        {% if entry %}
+          <a class="btn-pill btn-white" href="{% url 'shows:detail' show.tvmaze_id %}?tab=tracking"><i class="bi bi-pencil"></i>Edit my progress</a>
+        {% else %}
+          <form method="post" action="{% url 'shows:add' %}" class="m-0">
+            {% csrf_token %}<input type="hidden" name="tvmaze_id" value="{{ show.tvmaze_id }}">
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button class="btn-pill btn-white" type="submit"><i class="bi bi-plus-lg"></i>Add to my collection</button>
+          </form>
+        {% endif %}
+        <a class="btn-pill btn-ghost" href="{{ show.tvmaze_url }}" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i>View on TVmaze</a>
+      </div>
+      <div class="label-caps" data-watch-heading>Where to watch · {% if show.channel_type == "web channel" %}original web channel{% elif show.channel_type == "network" %}original network{% else %}network{% endif %}</div>
+      <div class="watch-row mb-2">
+        {% if show.network %}
+          <a class="provider" href="{{ show.tvmaze_url }}" target="_blank" rel="noopener" data-watch-link>
+            <span class="logo">{{ show.network|channel_initials }}</span>
+            <span><span class="p1 d-block">{{ show.network }}</span><span class="p2">Original {% if show.channel_type == "web channel" %}web channel{% else %}network{% endif %}{% if show.channel_country %} · {{ show.channel_country }}{% endif %} · verified by TVmaze</span></span>
+          </a>
+        {% else %}
+          <span class="muted" data-no-channel>No network or web channel listed on TVmaze.</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="col-lg-5 offset-lg-1">
+      {% if not show.background_url and show.image_url %}<img class="detail-poster" src="{{ show.image_url }}" alt="{{ show.name }} poster" data-poster-fallback>{% endif %}
+      <div class="desc-panel"><div class="label-caps">Summary</div><p>{{ show.summary|default:"TVmaze has no summary for this show." }}</p></div></div>
+  </div></div>
+</section>
+
+<section class="px-edge" style="position:relative;margin-top:6px">
+  {% block show_tabs %}
+    {% if entry %}
+      <nav class="tabbar" aria-label="Show sections"><a href="?tab=tracking" class="active">MY TRACKING</a></nav>
+      <div class="track-panel" data-tracking-summary>
+        <div class="track-grid">
+          <section class="tpanel"><div class="label-caps">Status &amp; progress</div><div class="fs-5 fw-bold"><span class="sdot st-{{ entry.status }} me-2"></span>{{ entry.get_status_display }}</div><div class="muted">{{ entry.progress_text }}</div></section>
+          <section class="tpanel"><div class="label-caps">My rating</div><div class="rating-text">{% if entry.rating %}{{ entry.rating }} <small>of 5</small>{% else %}<small>Not rated</small>{% endif %}</div></section>
+          <section class="tpanel tpanel-notes"><div class="label-caps">Notes</div><p class="muted mb-0">{{ entry.notes|default:"No notes yet." }}</p></section>
+        </div>
+        <div class="track-actions"><span class="dim small">Saved {{ entry.created_at|date:"M j, Y" }} · last updated {{ entry.updated_at|date:"M j, Y" }}</span></div>
+      </div>
+    {% endif %}
+  {% endblock %}
+</section>
+{% endblock %}

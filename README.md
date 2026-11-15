@@ -133,3 +133,19 @@ shows with the same title can be told apart.
   collection can't be deleted.
 - Both models are in the Django admin (`/admin/`) with search and filters, for inspecting data
   while developing.
+
+### Saving a show
+
+Click **+** on a Discover result (or **Add to my collection** on a show page). The form sends
+only the show's TVmaze ID as a POST to `/collection/add/`. The server then fetches the show from
+TVmaze itself, so a browser can never plant made-up show details. It creates or refreshes the
+shared `Show` row, adds it to your collection as **Plan to Watch**, and opens
+`/shows/<tvmaze_id>/?tab=tracking`. Saving the same show twice is refused with a message. If
+TVmaze is unavailable, nothing is saved and you see why. Opening `/collection/add/` in the
+browser (a GET request) returns 405.
+
+The show page's backdrop is the widest TVmaze background at least 1920 px wide. When there
+isn't one, the page uses the poster. **Where to watch** shows only the original network or web
+channel that TVmaze lists, and links to the show's TVmaze page; HTTP.tv never claims streaming
+availability. Known limitation: some TVmaze backdrops have the show's title printed in the
+artwork (e.g. Severance), because there's no reliable automatic way to detect it.

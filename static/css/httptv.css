@@ -232,3 +232,15 @@ footer.site a { color: var(--muted); text-decoration: underline; }
 .auth-card ul { padding-left: 18px; margin: 6px 0 0; }
 .errorlist { list-style: none; padding: 0; margin: 4px 0 0; color: #FCA5A5; font-size: .82rem; }
 .form-dark .form-control::placeholder { color: var(--dim); }
+
+/* ---------- Status colours (one class per CollectionEntry.Status value) ---------- */
+.st-watching { background: var(--st-watching); } .st-plan_to_watch { background: var(--st-plan); }
+.st-on_hold { background: var(--st-hold); } .st-completed { background: var(--st-done); } .st-dropped { background: var(--st-drop); }
+.result-add-form { position: absolute; top: 8px; right: 8px; z-index: 3; margin: 0; }
+.result-add-form .result-add { position: static; }
+
+/* Details page without a qualifying backdrop: the poster sits in the layout flow above the
+   summary (never absolutely positioned, so it can't overlap the summary panel). */
+.detail-poster { display: block; width: clamp(140px, 13vw, 210px); aspect-ratio: 2/3; object-fit: cover; margin: 0 0 20px auto;
+  border-radius: var(--radius); box-shadow: 0 30px 60px rgba(0,0,0,.6); outline: 1px solid rgba(255,255,255,.12); }
+@media (max-width: 991px) { .detail-poster { display: none; } }
