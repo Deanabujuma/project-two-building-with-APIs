@@ -74,3 +74,23 @@ All taken with headless Microsoft Edge from `prototypes/` during the 2026-11-15 
 
 ### V0 — Baseline before Django work (2026-11-15, Phase 0)
 - `uv run pytest -q` → `44 passed in 0.12s` (TVmaze verification script tests only).
+
+### V1 — Package compatibility check (2026-11-15, Phase 1)
+Source: each package's official PyPI metadata (`https://pypi.org/pypi/<package>/json`), checked before installing.
+
+| Package | Version | `requires_python` | Python classifiers | Django classifiers |
+|---|---|---|---|---|
+| Django | 6.1.3 (2026-11-03) | >=3.12 | 3.12, 3.13, 3.14, 3.15 | — |
+| djangorestframework | 3.18.3 (2026-10-06) | >=3.10 | 3.10–3.15 | 5.2, 6.0, 6.1 |
+| django-filter | 26.2 (2026-10-03) | >=3.11 | 3.11–3.15 | 5.2, 6.0, 6.1 |
+| pytest-django | 4.14.0 (2026-08-10) | >=3.10 | 3.10–3.14 | 5.2, 6.0 |
+
+- **Result:** all four support the project's `requires-python >=3.12` and local Python 3.14.
+- **Caveat:** pytest-django's classifiers stop at Django 6.0. That's packaging metadata, not a declared incompatibility. It was resolved by running the real suite on Django 6.1.3 (see V2). Fallback if it had failed: Django 6.0.
+- **Supporting evidence:** the student's Project #1 (Applicant-Tracking-System) already runs Django 6.1 with pytest-django 4.14.
+
+### V2 — Foundation verified (2026-11-15, Phase 1)
+- The custom `accounts.User` was set as `AUTH_USER_MODEL` before the first `migrate`. `accounts/migrations/0001_initial.py` was created, and no migration references `auth.User`.
+- `uv run pytest -q` → `50 passed` (44 original + 6 new setup tests), without `.env`.
+- `manage.py check` → "System check identified no issues". Dev server: `/admin/login/` → HTTP 200.
+- `git status` confirms `.env` and `db.sqlite3` are ignored.

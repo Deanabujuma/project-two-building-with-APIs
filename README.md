@@ -50,3 +50,50 @@ uv run pytest
 The tests in `tests/test_verify_tvmaze.py` replace the network call with fake responses, so
 they run offline and cover failures that are hard to trigger by hand (timeouts, connection
 errors, HTTP 429/5xx, invalid JSON). Real requests are checked manually by running the script.
+
+## HTTP.tv Django app
+
+HTTP.tv is a Django web app for finding TV shows on TVmaze, saving them to a personal
+collection, and tracking status, progress, ratings and notes. It also has its own authenticated
+REST API. The design is in `prd/httptv.md`, the build order in `plans/httptv.md`, and the UI
+prototypes in `prototypes/`. Sections below are added as each feature is built.
+
+Stack: Python ≥3.12 (3.14 pinned locally), Django 6.1, Django REST Framework 3.18,
+django-filter 26.2, SQLite, and pytest with pytest-django.
+
+### First-time setup
+
+1. Install dependencies: `uv sync`
+2. Create your environment file from the example (`.env` is Git-ignored, so secrets stay local):
+
+   ```
+   cp .env.example .env
+   ```
+
+   Then replace the `DJANGO_SECRET_KEY` placeholder with a real key. This command generates one:
+
+   ```
+   uv run python -c "from django.core.management.utils import get_random_secret_key as k; print(k())"
+   ```
+
+   Django refuses to start if `DJANGO_SECRET_KEY` is missing.
+3. Create the database: `uv run --env-file .env python manage.py migrate`
+4. (Optional) Create an admin account: `uv run --env-file .env python manage.py createsuperuser`
+5. Run the site: `uv run --env-file .env python manage.py runserver`, then open http://127.0.0.1:8000/
+   (the admin is at http://127.0.0.1:8000/admin/).
+
+Every `manage.py` command needs `--env-file .env` so Django can read your settings.
+
+| Variable | Used by | Purpose |
+|---|---|---|
+| `DJANGO_SECRET_KEY` | Django | Required secret key |
+| `DJANGO_DEBUG` | Django | `true` for local development |
+| `DJANGO_ALLOWED_HOSTS` | Django | Comma-separated host names |
+| `HTTPTV_API_TOKEN` | `httptv_client.py` | Your API token (never commit it) |
+| `HTTPTV_API_URL` | `httptv_client.py` | API base URL (default `http://127.0.0.1:8000/api/`) |
+
+### Tests
+
+`uv run pytest` runs every test, including the original 44 TVmaze verification-script tests.
+It needs no `.env` and no network, because the tests use `config.test_settings`, which supplies a
+test-only secret key, and every external HTTP call is mocked.
