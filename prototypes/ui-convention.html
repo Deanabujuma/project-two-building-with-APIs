@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="en" data-bs-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HTTP.tv Cinematic Prototype</title>
+<!-- THROWAWAY PROTOTYPE (Direction D: cinematic dark). Not production code.
+     Earlier variants A–C are preserved in ui-convention-v1-variants.html.
+     Show facts and images are real TVmaze data fetched 2026-11-15; tracking data is invented sample data. -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0B0B0F; --surface: #15161C; --surface-2: #1F2029; --line: rgba(255,255,255,.10);
+  --text: #F9F9F9; --muted: #A8A9B3; --dim: #6E7080; --edge: clamp(16px, 4vw, 64px);
+  --nav-h: 68px; --radius: 8px;
+  --rail-gap: 20px; --hover-scale: 1.04; --tile-wide-w: clamp(240px, 22vw, 330px); --tile-poster-w: clamp(140px, 12vw, 184px);
+  --st-watching: #3B82F6; --st-plan: #9CA3AF; --st-hold: #F59E0B; --st-done: #22C55E; --st-drop: #EF4444;
+}
+html, body { background: var(--bg); color: var(--text); font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; overflow-x: hidden; }
+body { padding-bottom: 40px; }
+a { color: inherit; text-decoration: none; }
+.px-edge { padding-left: var(--edge); padding-right: var(--edge); }
+.muted { color: var(--muted); } .dim { color: var(--dim); }
+.clamp-1, .clamp-2, .clamp-3 { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
+.clamp-1 { -webkit-line-clamp: 1; } .clamp-2 { -webkit-line-clamp: 2; } .clamp-3 { -webkit-line-clamp: 3; }
+
+/* ---------- Top navigation ---------- */
+.topnav { position: fixed; inset: 0 0 auto 0; height: var(--nav-h); z-index: 1000;
+  background: linear-gradient(180deg, rgba(0,0,0,.92) 0%, rgba(0,0,0,.78) 100%); backdrop-filter: blur(6px);
+  border-bottom: 1px solid rgba(255,255,255,.04); }
+.nav-inner { height: 100%; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; }
+.profile { display: flex; align-items: center; gap: 10px; justify-self: start; color: var(--text); }
+.avatar { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: .9rem;
+  background: linear-gradient(135deg, #2563EB, #7C3AED); box-shadow: 0 0 0 2px rgba(255,255,255,.15); }
+.uname { font-size: .9rem; font-weight: 500; color: var(--muted); }
+.mainnav { display: flex; align-items: center; gap: clamp(10px, 2.2vw, 34px); }
+.brand { font-weight: 800; letter-spacing: .02em; font-size: 1.05rem; margin-right: clamp(4px, 1.4vw, 22px); color: var(--text); }
+.brand span { color: #60A5FA; }
+.navlink { position: relative; display: flex; align-items: center; gap: 8px; font-size: .78rem; font-weight: 600;
+  letter-spacing: .14em; text-transform: uppercase; color: #E5E5EA; padding: 6px 0; white-space: nowrap; opacity: .82; transition: opacity .15s; }
+.navlink i { font-size: 1.05rem; }
+.navlink::after { content: ""; position: absolute; left: 0; right: 0; bottom: -4px; height: 2px; border-radius: 2px; background: #fff;
+  transform: scaleX(0); transform-origin: left; transition: transform .2s ease; }
+.navlink:hover { opacity: 1; } .navlink:hover::after { transform: scaleX(1); }
+.navlink.active { opacity: 1; } .navlink.active::after { transform: scaleX(1); }
+.nav-search { justify-self: end; font-size: 1.2rem; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; transition: background .15s; }
+.nav-search:hover, .nav-search.active { background: rgba(255,255,255,.12); }
+@media (max-width: 1199px) { .uname { display: none; } }
+@media (max-width: 991px) { .navlink span { display: none; } .navlink i { font-size: 1.25rem; } }
+@media (max-width: 575px) { .brand { display: none; } .mainnav { gap: 18px; } }
+
+/* ---------- Buttons ---------- */
+.btn-pill { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 28px; border-radius: 999px;
+  font-weight: 700; font-size: .82rem; letter-spacing: .14em; text-transform: uppercase; border: 2px solid transparent; transition: all .15s; cursor: pointer; white-space: nowrap; }
+.btn-white { background: #F9F9F9; color: #0B0B0F; } .btn-white:hover { background: #fff; color: #0B0B0F; transform: translateY(-1px); }
+.btn-ghost { background: rgba(0,0,0,.35); color: #fff; border-color: rgba(255,255,255,.85); }
+.btn-ghost:hover { background: rgba(255,255,255,.14); color: #fff; }
+.btn-saved { background: rgba(34,197,94,.14); color: #DCFCE7; border-color: rgba(134,239,172,.6); }
+.btn-danger-pill { background: #DC2626; color: #fff; } .btn-danger-pill:hover { background: #EF4444; color: #fff; }
+.btn-circle { width: 48px; height: 48px; padding: 0; }
+
+/* ---------- Hero (home + details) ---------- */
+.hero { position: relative; min-height: clamp(460px, 82vh, 860px); display: flex; align-items: flex-end; overflow: hidden; }
+.hero-bg { position: absolute; inset: 0; background-size: cover; background-position: 72% 25%; transform: scale(1.04); /* trims thin borders baked into some TVmaze backdrops */ }
+.hero-shade { position: absolute; inset: 0;
+  background: linear-gradient(90deg, rgba(11,11,15,.97) 0%, rgba(11,11,15,.86) 24%, rgba(11,11,15,.35) 52%, rgba(11,11,15,0) 72%),
+              linear-gradient(0deg, var(--bg) 0%, rgba(11,11,15,.55) 22%, rgba(11,11,15,0) 45%),
+              linear-gradient(180deg, rgba(11,11,15,.6) 0%, rgba(11,11,15,0) 18%); }
+.hero-content { position: relative; width: 100%; padding-top: calc(var(--nav-h) + 40px); padding-bottom: clamp(32px, 7vh, 80px); }
+.hero-text { max-width: min(560px, 38vw); }
+.eyebrow { font-size: .75rem; font-weight: 700; letter-spacing: .2em; color: #93C5FD; text-transform: uppercase; margin-bottom: 12px; }
+.hero-title { font-size: clamp(2.4rem, 5.2vw, 5rem); font-weight: 800; line-height: .98; letter-spacing: -.02em; margin-bottom: 18px; text-shadow: 0 4px 30px rgba(0,0,0,.5); }
+.hero-meta { font-size: .95rem; color: #D4D4DC; margin-bottom: 14px; }
+.hero-meta .dot { margin: 0 8px; color: var(--dim); }
+.hero-desc { font-size: 1.05rem; line-height: 1.55; color: #E4E4EA; margin-bottom: 26px; }
+/* Fallback when a show has no wide background: blurred poster wash + the poster itself on the right. */
+.hero--poster .hero-bg { filter: blur(42px) saturate(1.3) brightness(.55); transform: scale(1.2); background-position: center; }
+.hero-poster { position: absolute; right: calc(var(--edge) + 4vw); bottom: 12%; width: clamp(160px, 18vw, 280px); aspect-ratio: 2/3; object-fit: cover;
+  border-radius: 12px; box-shadow: 0 30px 60px rgba(0,0,0,.6); }
+@media (max-width: 991px) {
+  .hero { min-height: clamp(420px, 70vh, 640px); }
+  .hero-text { max-width: 100%; }
+  .hero-shade { background: linear-gradient(0deg, var(--bg) 0%, rgba(11,11,15,.88) 38%, rgba(11,11,15,.25) 75%, rgba(11,11,15,.5) 100%); }
+  .hero-poster { display: none; }
+}
+
+/* ---------- Metadata badges ---------- */
+.badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.mbadge { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px; border-radius: 4px; font-size: .72rem; font-weight: 600;
+  letter-spacing: .04em; color: #E5E5EA; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.28); }
+.mbadge.solid { background: rgba(255,255,255,.9); color: #0B0B0F; border-color: transparent; }
+.mbadge .bi-star-fill { color: #FBBF24; }
+
+/* ---------- Rails (horizontal rows) ---------- */
+.rail-section { margin-top: 8px; margin-bottom: 30px; position: relative; }
+.rail-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 4px; display: flex; align-items: baseline; gap: 12px; }
+.rail-title small { font-size: .78rem; font-weight: 500; color: var(--dim); }
+/* One rail rhythm everywhere: same gap, same padding (room for the hover scale), same snap. */
+.rail { display: flex; align-items: flex-start; gap: var(--rail-gap); overflow-x: auto; scroll-snap-type: x proximity; padding: 16px var(--edge) 10px; margin: 0 calc(var(--edge) * -1);
+  scroll-padding-left: var(--edge); scrollbar-width: none; }
+.rail::-webkit-scrollbar { display: none; }
+.rail-wrap { position: relative; }
+.rail-btn { position: absolute; top: 0; bottom: 0; width: calc(var(--edge) - 6px); min-width: 36px; z-index: 3; border: 0; color: #fff; font-size: 1.6rem;
+  background: linear-gradient(90deg, rgba(11,11,15,.9), rgba(11,11,15,0)); opacity: 0; transition: opacity .2s; }
+.rail-btn.next { right: calc(var(--edge) * -1); background: linear-gradient(270deg, rgba(11,11,15,.9), rgba(11,11,15,0)); }
+.rail-btn.prev { left: calc(var(--edge) * -1); }
+.rail-wrap:hover .rail-btn { opacity: 1; }
+@media (hover: none) { .rail-btn { display: none; } }
+
+/* Shared show card: used by every rail AND the collection/discover grids, so hover + labels are identical everywhere. */
+.tile { position: relative; flex: 0 0 auto; scroll-snap-align: start; display: block; }
+.tile .art, .pcard .art { position: relative; border-radius: var(--radius); overflow: hidden; background: var(--surface-2); box-shadow: 0 10px 24px rgba(0,0,0,.45);
+  outline: 3px solid transparent; outline-offset: 0; transition: transform .25s ease, box-shadow .25s ease, outline-color .25s; }
+.tile:hover .art, .tile:focus-visible .art, .pcard:hover .art, .pcard:focus-visible .art { transform: scale(var(--hover-scale)); outline-color: rgba(249,249,249,.85); box-shadow: 0 22px 40px rgba(0,0,0,.6); }
+.tile:hover, .tile:focus-visible { z-index: 2; }
+.tile .art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tile-wide { width: var(--tile-wide-w); } .tile-wide .art { aspect-ratio: 16/9; }
+.tile-poster { width: var(--tile-poster-w); } .tile-poster .art { aspect-ratio: 2/3; }
+.tile-flag { position: absolute; top: 8px; right: 8px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: .8rem;
+  background: rgba(34,197,94,.92); color: #fff; }
+/* Caption block (same in rails and grids): title, status line, progress line. */
+.cap-t { font-weight: 600; font-size: .95rem; margin-top: 12px; line-height: 1.25; }
+.cap-s { font-size: .8rem; color: var(--muted); display: flex; align-items: center; gap: 6px; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cap-p { font-size: .8rem; color: var(--dim); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cap-p.started { color: #D4D4DC; }
+.fallback-art { width: 100%; height: 100%; display: grid; place-items: center; font-size: 2.4rem; font-weight: 800; color: rgba(255,255,255,.7);
+  background: linear-gradient(135deg, #1E293B, #312E81); }
+
+/* ---------- Details page ---------- */
+.detail-hero { min-height: clamp(520px, 88vh, 900px); }
+.detail-hero .hero-shade { background:
+  linear-gradient(90deg, rgba(11,11,15,.96) 0%, rgba(11,11,15,.82) 28%, rgba(11,11,15,.35) 55%, rgba(11,11,15,.55) 100%),
+  linear-gradient(0deg, var(--bg) 0%, rgba(11,11,15,.4) 25%, rgba(11,11,15,0) 50%),
+  linear-gradient(180deg, rgba(11,11,15,.6) 0%, rgba(11,11,15,0) 18%); }
+.desc-panel { background: rgba(11,11,15,.55); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 22px 24px; }
+.desc-panel p { font-size: 1rem; line-height: 1.65; color: #E4E4EA; margin: 0; }
+.label-caps { font-size: .72rem; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+.watch-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: stretch; }
+.provider { display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 8px 16px 8px 8px; border-radius: 10px;
+  background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.16); transition: background .15s; }
+.provider:hover { background: rgba(255,255,255,.12); }
+.provider .logo { width: 40px; height: 40px; border-radius: 8px; display: grid; place-items: center; font-weight: 800; font-size: .9rem;
+  background: linear-gradient(135deg, #F9F9F9, #C7C9D3); color: #0B0B0F; }
+.provider .p1 { font-weight: 700; font-size: .9rem; line-height: 1.1; } .provider .p2 { font-size: .72rem; color: var(--muted); }
+@media (max-width: 991px) { .detail-hero .hero-shade { background: linear-gradient(0deg, var(--bg) 0%, rgba(11,11,15,.9) 45%, rgba(11,11,15,.35) 80%, rgba(11,11,15,.6) 100%); } }
+
+.tabbar { display: flex; gap: clamp(20px, 3vw, 44px); border-bottom: 1px solid var(--line); margin-bottom: 6px; overflow-x: auto; scrollbar-width: none; }
+.tabbar a { position: relative; padding: 14px 0; font-size: .85rem; font-weight: 700; letter-spacing: .16em; color: var(--muted); white-space: nowrap; }
+.tabbar a:hover { color: var(--text); }
+.tabbar a.active { color: var(--text); }
+.tabbar a.active::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 3px; border-radius: 3px; background: #fff; }
+.note-line { font-size: .8rem; color: var(--dim); margin: 6px 0 0; }
+.cast-card { flex: 0 0 auto; width: 128px; text-align: center; scroll-snap-align: start; }
+.cast-card img, .cast-card .fallback-art { width: 104px; height: 104px; border-radius: 50%; object-fit: cover; margin: 0 auto 10px; display: block; font-size: 1.6rem; }
+.season-card { flex: 0 0 auto; width: 210px; padding: 18px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); scroll-snap-align: start; }
+.empty-panel { padding: 48px 0; max-width: 640px; }
+
+/* ---------- Tracking form ---------- */
+.track-panel { padding: 26px 0 10px; }
+.track-grid { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(240px, .8fr) minmax(360px, 1.7fr); gap: 20px; align-items: stretch; }
+.tpanel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 22px; display: flex; flex-direction: column; }
+.tpanel-notes textarea { flex: 1; min-height: 190px; resize: vertical; }
+.rating-text { font-size: 1.5rem; font-weight: 700; margin-top: 6px; } .rating-text small { font-size: .85rem; color: var(--muted); font-weight: 500; }
+.track-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 20px; }
+@media (max-width: 1199px) { .track-grid { grid-template-columns: 1fr 1fr; } .tpanel-notes { grid-column: 1 / -1; } }
+@media (max-width: 767px) { .track-grid { grid-template-columns: 1fr; } }
+.form-dark .form-control, .form-dark .form-select { background-color: var(--surface); border-color: rgba(255,255,255,.16); color: var(--text); }
+.form-dark .form-control:focus, .form-dark .form-select:focus { border-color: #93C5FD; box-shadow: 0 0 0 .2rem rgba(147,197,253,.2); background-color: var(--surface); color: var(--text); }
+.form-dark .form-label { font-size: .8rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.star-input { display: inline-flex; gap: 4px; }
+.star-input button { background: none; border: 0; padding: 0 2px; font-size: 2.2rem; line-height: 1; color: #3F4150; transition: transform .1s; }
+.star-input button.on { color: #FBBF24; } .star-input button:hover { transform: scale(1.15); }
+.err { color: #FCA5A5; font-size: .82rem; margin-top: 4px; }
+
+/* ---------- Collection page ---------- */
+.page-top { padding-top: calc(var(--nav-h) + 34px); position: relative; }
+.page-glow { position: absolute; inset: 0 0 auto 0; height: 360px; background-size: cover; background-position: center 30%; opacity: .22; filter: blur(30px) saturate(1.2);
+  mask-image: linear-gradient(180deg, #000 0%, transparent 100%); -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 100%); pointer-events: none; }
+.page-title { font-size: clamp(1.8rem, 3vw, 2.6rem); font-weight: 800; letter-spacing: -.01em; }
+.chips { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
+.chip { flex: 0 0 auto; height: 38px; padding: 0 16px; border-radius: 999px; display: inline-flex; align-items: center; gap: 8px; font-size: .85rem; font-weight: 600;
+  background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.14); color: #E5E5EA; transition: background .15s; }
+.chip:hover { background: rgba(255,255,255,.14); }
+.chip.active { background: #F9F9F9; color: #0B0B0F; border-color: #F9F9F9; }
+.chip .n { font-size: .75rem; opacity: .65; }
+.toolbar .form-control, .toolbar .form-select { height: 42px; border-radius: 999px; background-color: var(--surface); border-color: rgba(255,255,255,.14); color: var(--text); }
+.toolbar .form-control::placeholder { color: var(--dim); }
+.poster-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(156px, 1fr)); gap: 30px 22px; }
+.pcard { display: block; }
+.pcard .art { aspect-ratio: 2/3; }
+.pcard .art img { width: 100%; height: 100%; object-fit: cover; }
+.pcard .hover-cta { position: absolute; inset: 0; display: grid; place-items: end center; padding-bottom: 16px; background: linear-gradient(0deg, rgba(0,0,0,.85), rgba(0,0,0,0) 55%);
+  opacity: 0; transition: opacity .2s; }
+.pcard:hover .hover-cta, .pcard:focus-visible .hover-cta { opacity: 1; }
+.hover-cta span { background: #F9F9F9; color: #0B0B0F; font-size: .7rem; font-weight: 700; letter-spacing: .12em; padding: 7px 14px; border-radius: 999px; }
+.sdot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: 0 0 auto; }
+.stars { color: #FBBF24; font-size: .8rem; letter-spacing: 1px; } .stars .off { color: #3F4150; }
+.pager { display: flex; justify-content: center; gap: 8px; margin-top: 44px; }
+.pager a, .pager span { min-width: 42px; height: 42px; padding: 0 14px; border-radius: 999px; display: grid; place-items: center; font-weight: 600; font-size: .9rem;
+  background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.14); }
+.pager a:hover { background: rgba(255,255,255,.14); }
+.pager .cur { background: #F9F9F9; color: #0B0B0F; } .pager .off { opacity: .35; }
+.empty-state { text-align: center; padding: 70px 16px; }
+.empty-state i { font-size: 3rem; color: var(--dim); }
+
+/* ---------- Discover ---------- */
+.big-search { position: relative; max-width: 760px; }
+.big-search input { height: 60px; border-radius: 999px; padding-left: 58px; font-size: 1.1rem; background: var(--surface); border: 1px solid rgba(255,255,255,.16); color: var(--text); }
+.big-search i { position: absolute; left: 22px; top: 50%; transform: translateY(-50%); font-size: 1.25rem; color: var(--muted); }
+.result-add { position: absolute; top: 8px; right: 8px; z-index: 2; width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(255,255,255,.6);
+  background: rgba(11,11,15,.7); color: #fff; display: grid; place-items: center; }
+.result-add.saved { background: rgba(34,197,94,.9); border-color: transparent; }
+
+/* ---------- Remove confirmation ---------- */
+.confirm-wrap { min-height: 100vh; display: grid; place-items: center; position: relative; padding: calc(var(--nav-h) + 24px) 16px 24px; }
+.confirm-card { position: relative; max-width: 520px; width: 100%; background: rgba(21,22,28,.92); border: 1px solid var(--line); border-radius: 16px; padding: 32px; box-shadow: 0 40px 80px rgba(0,0,0,.6); }
+
+footer.site { border-top: 1px solid var(--line); margin-top: 50px; padding-top: 22px; font-size: .8rem; color: var(--dim); }
+footer.site a { color: var(--muted); text-decoration: underline; }
+
+/* ---------- Toast + prototype bar (NOT part of the design) ---------- */
+#toast { position: fixed; top: calc(var(--nav-h) + 14px); left: 50%; transform: translate(-50%, -20px); opacity: 0; z-index: 1500; transition: all .25s;
+  background: #F9F9F9; color: #0B0B0F; font-weight: 600; font-size: .9rem; padding: 10px 20px; border-radius: 999px; box-shadow: 0 10px 30px rgba(0,0,0,.5); pointer-events: none; max-width: calc(100vw - 32px); }
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+#proto { position: fixed; left: 12px; bottom: 12px; z-index: 3000; max-width: min(460px, calc(100vw - 24px)); background: #111; color: #eee; border: 2px dashed #f0c400;
+  border-radius: 10px; padding: 8px 10px; font: 12px/1.45 ui-monospace, Consolas, monospace; box-shadow: 0 6px 24px rgba(0,0,0,.5); }
+#proto .tag { color: #f0c400; font-weight: 700; }
+#proto .url { color: #8fd18f; word-break: break-all; } #proto .msg { color: #9ecbff; }
+#proto button, #proto a.pbtn { background: #333; color: #fff; border: 1px solid #555; border-radius: 5px; padding: 1px 8px; font: inherit; margin: 4px 4px 0 0; display: inline-block; }
+#proto button:hover, #proto a.pbtn:hover { background: #555; }
+#proto.min .body { display: none; }
+</style>
+</head>
+<body>
+<header class="topnav"><div class="nav-inner px-edge" id="nav"></div></header>
+<div id="app"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<div id="proto" role="region" aria-label="Prototype controls">
+  <div class="d-flex align-items-center gap-2"><span class="tag">PROTOTYPE · Direction D (cinematic dark)</span>
+    <button id="p-min" style="margin:0 0 0 auto" aria-label="Collapse prototype panel">–</button></div>
+  <div class="body">
+    <div>Django URL: <span class="url" id="p-url"></span></div>
+    <div class="msg" id="p-msg"></div>
+    <button id="p-empty">Empty collection: off</button>
+    <button id="p-nobg">Missing backdrop: off</button>
+    <a class="pbtn" href="ui-convention-v1-variants.html">v1 variants A–C</a>
+  </div>
+</div>
+
+<script>
+/* ======================= DATA ======================= */
+// Real TVmaze show data (fetched 2026-11-15 via /shows/:id?embed[]=seasons&embed[]=cast&embed[]=images).
+const SHOWS = [{"tvmaze_id":169,"name":"Breaking Bad","premiered":"2008-01-20","ended":"2019-10-11","show_status":"Ended","genres":"Drama, Crime, Thriller","network":"AMC","channel_kind":"Network","channel_country":"United States","official_site":"http://www.amc.com/shows/breaking-bad","runtime":60,"tvmaze_rating":9.2,"language":"English","type":"Scripted","summary":"Breaking Bad follows protagonist Walter White, a chemistry teacher who lives in New Mexico with his wife and teenage son who has cerebral palsy. White is diagnosed with Stage III cancer and given a prognosis of two years left to live. With a new sense of fearlessness based on his medical prognosis, and a desire to secure his family's financial security, White chooses to enter a dangerous world of drugs and crime and ascends to power in this world. The series explores how a fatal diagnosis such as White's releases a typical man from the daily concerns and constraints of normal society and follows his transformation from mild family man to a kingpin of the drug trade.","image_url":"https://static.tvmaze.com/uploads/images/medium_portrait/501/1253519.jpg","background_url":"https://static.tvmaze.com/uploads/images/original_untouched/219/547904.jpg","tvmaze_url":"https://www.tvmaze.com/shows/169/breaking-bad","seasons":[{"number":1,"episodes":7,"start":"2008-01-20","end":"2008-03-09"},{"number":2,"episodes":13,"start":"2009-03-08","end":"2009-05-31"},{"number":3,"episodes":13,"start":"2010-03-21","end":"2010-06-13"},{"number":4,"episodes":13,"start":"2011-07-17","end":"2011-10-09"},{"number":5,"episodes":16,"start":"2012-07-15","end":"2019-10-11"}],"cast":[{"person":"Bryan Cranston","character":"Walter White","image":"https://static.tvmaze.com/uploads/images/medium_portrait/0/2404.jpg"},{"person":"Aaron Paul","character":"Jesse Pinkman","image":"https://static.tvmaze.com/uploads/images/medium_portrait/0/2408.jpg"},{"person":"Anna Gunn","character":"Skyler White","image":"https://static.tvmaze.com/uploads/images/medium_portrait/0/2409.jpg"},{"person":"RJ Mitte","character":"Walter White Jr.","image":"https://static.tvmaze.com/uploads/images/medium_portrait/0/2405.jpg"},{"person":"Dean Norris","character":"Hank Schrader","image":"https://static.tvmaze.com/uploads/images/medium_portrait/0/2407.jpg"},{"person":"Betsy Brandt","character":"Marie Schrader","image":"https://static.tvmaze.com/uploads/images/medium_portrait/0/2406.jpg"},{"person":"Bob Odenkirk","character":"Saul Goodman","image":"https://static.tvmaze.com/uploads/images/medium_portrait/0/2403.jpg"},{"person":"Jonathan Banks","character":"Michael 'Mike' Ehrmantraut","image":"https://static.tvmaze.com/uploads/images/medium_portrait/0/2401.jpg"}]},{"tvmaze_id":526,"name":"The Office","premiered":"2005-03-24","ended":"2013-05-16","show_status":"Ended","genres":"Comedy","network":"NBC","channel_kind":"Network","channel_country":"United States","official_site":"http://www.nbc.com/the-office","runtime":30,"tvmaze_rating":8.5,"language":"English","type":"Scripted","summary":"Steve Carell stars in The Office, a fresh and funny mockumentary-style glimpse into the daily interactions of the eccentric workers at the Dunder Mifflin paper supply company. Based on the smash-hit British series of the same name and adapted for American Television by Greg Daniels, this fast-paced comedy parodies contemporary American water-cooler culture. Earnest but clueless regional manager Michael Scott believes himself to be an exceptional boss and mentor, but actually receives more eye-rolls than respect from his oddball staff.","image_url":"https://static.tvmaze.com/uploads/images/medium_portrait/481/1204342.jpg","background_url":"https://static.tvmaze.com/uploads/images/original_untouched/220/550710.jpg","tvmaze_url":"https://www.tvmaze.com/shows/526/the-office","seasons":[{"number":1,"episodes":6,"start":"2005-03-24","end":"2005-04-26"},{"number":2,"episodes":22,"start":"2005-09-20","end":"2006-05-11"},{"number":3,"episodes":25,"start":"2006-09-21","end":"2007-05-17"},{"number":4,"episodes":19,"start":"2007-09-27","end":"2008-05-15"},{"number":5,"episodes":28,"start":"2008-09-25","end":"2009-05-14"},{"number":6,"episodes":26,"start":"2009-09-17","end":"2010-05-20"},{"number":7,"episodes":26,"start":"2010-09-23","end":"2011-05-19"},{"number":8,"episodes":24,"start":"2011-09-22","end":"2012-05-10"},{"number":9,"episodes":27,"start":"2012-09-20","end":"2013-05-16"}],"cast":[{"person":"Rainn Wilson","character":"Dwight Kurt Schrute","image":"https://static.tvmaze.com/uploads/images/medium_portrait/4/11326.jpg"},{"person":"John Krasinski","character":"Jim Halpert","image":"https://static.tvmaze.com/uploads/images/medium_portrait/4/11324.jpg"},{"person":"Leslie David Baker","character":"Stanley Hudson","image":"https://static.tvmaze.com/uploads/images/medium_portrait/4/11340.jpg"},{"person":"Phyllis Smith","character":"Phyllis Lapin-Vance","image":"https://static.tvmaze.com/uploads/images/medium_portrait/4/11335.jpg"},{"person":"Jenna Fischer","character":"Pam Beesly","image":"https://static.tvmaze.com/uploads/images/medium_portrait/4/11325.jpg"},{"person":"Brian Baumgartner","character":"Kevin Malone","image":"https://static.tvmaze.com/uploads/images/medium_portrait/4/11339.jpg"},{"person":"Angela Kinsey","character":"Angela Martin","image":"https://static.tvmaze.com/uploads/images/medium_portrait/4/11336.jpg"},{"person":"Oscar Nuñez","character":"Oscar Martinez","image":"https://static.tvmaze.com/uploads/images/medium_portrait/4/11338.jpg"}]},{"tvmaze_id":44933,"name":"Severance","premiered":"2022-02-18","ended":null,"show_status":"Running","genres":"Drama, Science-Fiction, Mystery","network":"Apple TV","channel_kind":"Web channel","channel_country":null,"official_site":"https://tv.apple.com/show/severance/umc.cmc.1srk2goyh2q2zdxcx605w8vtx","runtime":49,"tvmaze_rating":7.7,"language":"English","type":"Scripted","summary":"Mark Scout leads a team at Lumon Industries, whose employees have undergone a severance procedure, which surgically divides their memories between their work and personal lives. This daring experiment in \"work-life balance\" is called into question as Mark finds himself at the center of an unraveling mystery that will force him to confront the true nature of his work… and of himself.","image_url":"https://static.tvmaze.com/uploads/images/medium_portrait/548/1371406.jpg","background_url":"https://static.tvmaze.com/uploads/images/original_untouched/397/992687.jpg","tvmaze_url":"https://www.tvmaze.com/shows/44933/severance","seasons":[{"number":1,"episodes":9,"start":"2022-02-18","end":"2022-04-08"},{"number":2,"episodes":10,"start":"2025-01-17","end":"2025-03-21"}],"cast":[{"person":"Adam Scott","character":"Mark Scout","image":"https://static.tvmaze.com/uploads/images/medium_portrait/407/1018894.jpg"},{"person":"Tramell Tillman","character":"Seth Milchick","image":"https://static.tvmaze.com/uploads/images/medium_portrait/628/1570378.jpg"},{"person":"Britt Lower","character":"Helly Riggs","image":"https://static.tvmaze.com/uploads/images/medium_portrait/628/1570381.jpg"},{"person":"Zach Cherry","character":"Dylan George","image":"https://static.tvmaze.com/uploads/images/medium_portrait/628/1570380.jpg"},{"person":"Jen Tullock","character":"Devon Scout-Hale","image":"https://static.tvmaze.com/uploads/images/medium_portrait/628/1570382.jpg"},{"person":"John Turturro","character":"Irving Bailiff","image":"https://static.tvmaze.com/uploads/images/medium_portrait/555/1389790.jpg"},{"person":"Patricia Arquette","character":"Harmony Cobel / Mrs. Selvig","image":"https://static.tvmaze.com/uploads/images/medium_portrait/628/1570383.jpg"},{"person":"Christopher Walken","character":"Burt Goodman","image":"https://static.tvmaze.com/uploads/images/medium_portrait/555/1389791.jpg"}]},{"tvmaze_id":2993,"name":"Stranger Things","premiered":"2016-07-15","ended":"2025-12-31","show_status":"Ended","genres":"Drama, Horror, Science-Fiction","network":"Netflix","channel_kind":"Web channel","channel_country":null,"official_site":"https://www.netflix.com/title/80057281","runtime":65,"tvmaze_rating":8.4,"language":"English","type":"Scripted","summary":"When a young boy vanishes, a small town uncovers a mystery involving secret experiments, terrifying supernatural forces and one strange little girl.","image_url":"https://static.tvmaze.com/uploads/images/medium_portrait/595/1489169.jpg","background_url":"https://static.tvmaze.com/uploads/images/original_untouched/410/1025588.jpg","tvmaze_url":"https://www.tvmaze.com/shows/2993/stranger-things","seasons":[{"number":1,"episodes":8,"start":"2016-07-15","end":"2016-07-15"},{"number":2,"episodes":9,"start":"2017-10-27","end":"2017-10-27"},{"number":3,"episodes":8,"start":"2019-07-04","end":"2019-07-04"},{"number":4,"episodes":9,"start":"2022-05-27","end":"2022-07-01"},{"number":5,"episodes":8,"start":"2025-11-26","end":"2025-12-31"}],"cast":[{"person":"Winona Ryder","character":"Joyce Byers","image":"https://static.tvmaze.com/uploads/images/medium_portrait/602/1506062.jpg"},{"person":"Caleb McLaughlin","character":"Lucas Sinclair","image":"https://static.tvmaze.com/uploads/images/medium_portrait/602/1506089.jpg"},{"person":"Finn Wolfhard","character":"Mike Wheeler","image":"https://static.tvmaze.com/uploads/images/medium_portrait/602/1506088.jpg"},{"person":"Gaten Matarazzo","character":"Dustin Henderson","image":"https://static.tvmaze.com/uploads/images/medium_portrait/602/1506079.jpg"},{"person":"Natalia Dyer","character":"Nancy Wheeler","image":"https://static.tvmaze.com/uploads/images/medium_portrait/602/1506076.jpg"},{"person":"David Harbour","character":"Chief Jim Hopper","image":"https://static.tvmaze.com/uploads/images/medium_portrait/602/1506096.jpg"},{"person":"Joe Keery","character":"Steve Harrington","image":"https://static.tvmaze.com/uploads/images/medium_portrait/602/1506068.jpg"},{"person":"Charlie Heaton","character":"Jonathan Byers","image":"https://static.tvmaze.com/uploads/images/medium_portrait/602/1506084.jpg"}]},{"tvmaze_id":54198,"name":"The Bear","premiered":"2022-06-23","ended":"2026-06-25","show_status":"Ended","genres":"Drama, Comedy, Food","network":"Hulu","channel_kind":"Web channel","channel_country":"United States","official_site":"https://www.hulu.com/series/the-bear-05eb6a8e-90ed-4947-8c0b-e6536cbddd5f","runtime":35,"tvmaze_rating":7.3,"language":"English","type":"Scripted","summary":"Carmy, a young fine-dining chef, comes home to Chicago to run his family sandwich shop. As he fights to transform the shop and himself, he works alongside a rough-around-the-edges crew that ultimately reveal themselves as his chosen family.","image_url":"https://static.tvmaze.com/uploads/images/medium_portrait/629/1574642.jpg","background_url":"https://static.tvmaze.com/uploads/images/original_untouched/413/1034786.jpg","tvmaze_url":"https://www.tvmaze.com/shows/54198/the-bear","seasons":[{"number":1,"episodes":8,"start":"2022-06-23","end":"2022-06-23"},{"number":2,"episodes":10,"start":"2023-06-22","end":"2023-06-22"},{"number":3,"episodes":10,"start":"2024-06-26","end":"2024-06-26"},{"number":4,"episodes":10,"start":"2025-06-25","end":"2025-06-25"},{"number":5,"episodes":8,"start":"2026-05-05","end":"2026-06-25"}],"cast":[{"person":"Ebon Moss-Bachrach","character":"Richard \"Richie\" Jerimovich","image":"https://static.tvmaze.com/uploads/images/medium_portrait/413/1034303.jpg"},{"person":"Jeremy Allen White","character":"Carmen \"Carmy\" Berzatto","image":"https://static.tvmaze.com/uploads/images/medium_portrait/413/1034302.jpg"},{"person":"Abby Elliott","character":"Natalie \"Sugar\" Berzatto","image":"https://static.tvmaze.com/uploads/images/medium_portrait/413/1034305.jpg"},{"person":"Liza Colón-Zayas","character":"Tina Marrero","image":"https://static.tvmaze.com/uploads/images/medium_portrait/413/1034307.jpg"},{"person":"Matty Matheson","character":"Neil Fak","image":"https://static.tvmaze.com/uploads/images/medium_portrait/466/1166494.jpg"},{"person":"Ayo Edebiri","character":"Sydney Adamu","image":"https://static.tvmaze.com/uploads/images/medium_portrait/413/1034304.jpg"},{"person":"Lionel Boyce","character":"Marcus Brooks","image":"https://static.tvmaze.com/uploads/images/medium_portrait/413/1034306.jpg"},{"person":"Edwin Lee Gibson","character":"Ebraheim","image":"https://static.tvmaze.com/uploads/images/medium_portrait/466/1166493.jpg"}]},{"tvmaze_id":55350,"name":"Abbott Elementary","premiered":"2021-12-07","ended":null,"show_status":"Running","genres":"Comedy","network":"ABC","channel_kind":"Network","channel_country":"United States","official_site":"https://abc.com/shows/abbott-elementary","runtime":30,"tvmaze_rating":6.3,"language":"English","type":"Scripted","summary":"In this workplace comedy, a group of dedicated, passionate teachers — and a slightly tone-deaf principal — are brought together in a Philadelphia public school where, despite the odds stacked against them, they are determined to help their students succeed in life. Though these incredible public servants may be outnumbered and underfunded, they love what they do — even if they don't love the school district's less-than-stellar attitude toward educating children.","image_url":"https://static.tvmaze.com/uploads/images/medium_portrait/644/1611887.jpg","background_url":"https://static.tvmaze.com/uploads/images/original_untouched/381/953579.jpg","tvmaze_url":"https://www.tvmaze.com/shows/55350/abbott-elementary","seasons":[{"number":1,"episodes":13,"start":"2021-12-07","end":"2022-04-12"},{"number":2,"episodes":22,"start":"2022-09-21","end":"2023-04-19"},{"number":3,"episodes":14,"start":"2024-02-07","end":"2024-05-22"},{"number":4,"episodes":22,"start":"2024-10-09","end":"2025-04-16"},{"number":5,"episodes":22,"start":"2025-10-01","end":"2026-04-22"},{"number":6,"episodes":22,"start":"2026-10-07","end":"2027-01-13"}],"cast":[{"person":"Quinta Brunson","character":"Janine Teagues","image":"https://static.tvmaze.com/uploads/images/medium_portrait/607/1518250.jpg"},{"person":"Tyler James Williams","character":"Gregory Eddie","image":"https://static.tvmaze.com/uploads/images/medium_portrait/607/1518251.jpg"},{"person":"Janelle James","character":"Ava Coleman","image":"https://static.tvmaze.com/uploads/images/medium_portrait/607/1518252.jpg"},{"person":"Chris Perfetti","character":"Jacob Hill","image":"https://static.tvmaze.com/uploads/images/medium_portrait/607/1518253.jpg"},{"person":"Lisa Ann Walter","character":"Melissa Schemmenti","image":"https://static.tvmaze.com/uploads/images/medium_portrait/607/1518255.jpg"},{"person":"Sheryl Lee Ralph","character":"Barbara Howard","image":"https://static.tvmaze.com/uploads/images/medium_portrait/607/1518257.jpg"},{"person":"William Stanford Davis","character":"Mr. Johnson","image":"https://static.tvmaze.com/uploads/images/medium_portrait/607/1518258.jpg"}]},{"tvmaze_id":618,"name":"Better Call Saul","premiered":"2015-02-08","ended":"2022-08-15","show_status":"Ended","genres":"Drama, Crime, Legal","network":"AMC","channel_kind":"Network","channel_country":"United States","official_site":"https://www.amc.com/shows/better-call-saul--1002228","runtime":60,"tvmaze_rating":8.6,"language":"English","type":"Scripted","summary":"Better Call Saul is the prequel to the award-winning series Breaking Bad, set six years before Saul Goodman became Walter White's lawyer. When we meet him, the man who will become Saul Goodman is known as Jimmy McGill, a small-time lawyer searching for his destiny, and, more immediately, hustling to make ends meet. Working alongside, and often against, Jimmy is \"fixer\" Mike Ehrmantraut, a beloved character introduced in Breaking Bad. The series will track Jimmy's transformation into Saul Goodman, the man who puts \"criminal\" in \"criminal lawyer.","image_url":"https://static.tvmaze.com/uploads/images/medium_portrait/501/1253515.jpg","background_url":"https://static.tvmaze.com/uploads/images/original_untouched/405/1013248.jpg","tvmaze_url":"https://www.tvmaze.com/shows/618/better-call-saul","seasons":[{"number":1,"episodes":10,"start":"2015-02-08","end":"2015-04-06"},{"number":2,"episodes":10,"start":"2016-02-15","end":"2016-04-18"},{"number":3,"episodes":10,"start":"2017-04-10","end":"2017-06-19"},{"number":4,"episodes":10,"start":"2018-08-06","end":"2018-10-08"},{"number":5,"episodes":10,"start":"2020-02-23","end":"2020-04-20"},{"number":6,"episodes":13,"start":"2022-04-18","end":"2022-08-15"}],"cast":[{"person":"Bob Odenkirk","character":"Jimmy McGill","image":"https://static.tvmaze.com/uploads/images/medium_portrait/45/113922.jpg"},{"person":"Jonathan Banks","character":"Michael \"Mike\" Ehrmantraut","image":"https://static.tvmaze.com/uploads/images/medium_portrait/45/113921.jpg"},{"person":"Rhea Seehorn","character":"Kim Wexler","image":"https://static.tvmaze.com/uploads/images/medium_portrait/45/113923.jpg"},{"person":"Patrick Fabian","character":"Howard Hamlin","image":"https://static.tvmaze.com/uploads/images/medium_portrait/45/113925.jpg"},{"person":"Michael Mando","character":"Ignacio \"Nacho\" Varga","image":"https://static.tvmaze.com/uploads/images/medium_portrait/107/269600.jpg"},{"person":"Giancarlo Esposito","character":"Gustavo \"Gus\" Fring","image":"https://static.tvmaze.com/uploads/images/medium_portrait/107/269599.jpg"},{"person":"Michael McKean","character":"Chuck McGill","image":"https://static.tvmaze.com/uploads/images/medium_portrait/45/113924.jpg"},{"person":"Tony Dalton","character":"Eduard \"Lalo\" Salamanca","image":"https://static.tvmaze.com/uploads/images/medium_portrait/418/1046602.jpg"}]},{"tvmaze_id":23470,"name":"Succession","premiered":"2018-06-03","ended":"2023-05-28","show_status":"Ended","genres":"Drama, Family","network":"HBO","channel_kind":"Network","channel_country":"United States","official_site":"https://www.hbo.com/succession","runtime":63,"tvmaze_rating":7.5,"language":"English","type":"Scripted","summary":"Succession follows the saga of the Roys, a fictional, American global-media family that is not only rich and powerful but also powerfully dysfunctional. The drama will explore family loyalty, international business and the perils of power in the 21st century.Power, politics, money...it's all in the family in this provocative, funny series about a highly dysfunctional dynasty. When Logan Roy, CEO of one of the world's largest media and entertainment conglomerates, considers retirement, each of his four grown children follows a personal agenda that doesn't always sync with those of their siblings--or of their father.","image_url":"https://static.tvmaze.com/uploads/images/medium_portrait/453/1134275.jpg","background_url":"https://static.tvmaze.com/uploads/images/original_untouched/364/911662.jpg","tvmaze_url":"https://www.tvmaze.com/shows/23470/succession","seasons":[{"number":1,"episodes":10,"start":"2018-06-03","end":"2018-08-05"},{"number":2,"episodes":10,"start":"2019-08-11","end":"2019-10-13"},{"number":3,"episodes":9,"start":"2021-10-17","end":"2021-12-12"},{"number":4,"episodes":10,"start":"2023-03-26","end":"2023-05-28"}],"cast":[{"person":"Jeremy Strong","character":"Kendall Roy","image":"https://static.tvmaze.com/uploads/images/medium_portrait/158/397192.jpg"},{"person":"Kieran Culkin","character":"Roman Roy","image":"https://static.tvmaze.com/uploads/images/medium_portrait/158/397194.jpg"},{"person":"Sarah Snook","character":"Siobhan \"Shiv\" Roy","image":"https://static.tvmaze.com/uploads/images/medium_portrait/158/397193.jpg"},{"person":"Matthew Macfadyen","character":"Tom Wambsgans","image":"https://static.tvmaze.com/uploads/images/medium_portrait/158/397197.jpg"},{"person":"Nicholas Braun","character":"Greg Hirsch","image":"https://static.tvmaze.com/uploads/images/medium_portrait/158/397198.jpg"},{"person":"Alan Ruck","character":"Connor Roy","image":"https://static.tvmaze.com/uploads/images/medium_portrait/158/397195.jpg"},{"person":"J. Smith-Cameron","character":"Gerri Kellman","image":"https://static.tvmaze.com/uploads/images/medium_portrait/208/521734.jpg"},{"person":"Brian Cox","character":"Logan Roy","image":"https://static.tvmaze.com/uploads/images/medium_portrait/158/397191.jpg"}]},{"tvmaze_id":44458,"name":"Ted Lasso","premiered":"2020-08-14","ended":null,"show_status":"To Be Determined","genres":"Drama, Comedy, Sports","network":"Apple TV","channel_kind":"Web channel","channel_country":null,"official_site":"https://tv.apple.com/show/ted-lasso/umc.cmc.vtoh0mn0xn7t3c643xqonfzy","runtime":43,"tvmaze_rating":8.1,"language":"English","type":"Scripted","summary":"Ted Lasso centers on an idealistic — and clueless — all-American football coach hired to manage an English football club — despite having no soccer coaching experience at all.","image_url":"https://static.tvmaze.com/uploads/images/medium_portrait/634/1585930.jpg","background_url":"https://static.tvmaze.com/uploads/images/original_untouched/452/1131100.jpg","tvmaze_url":"https://www.tvmaze.com/shows/44458/ted-lasso","seasons":[{"number":1,"episodes":10,"start":"2020-08-14","end":"2020-10-02"},{"number":2,"episodes":12,"start":"2021-07-23","end":"2021-10-08"},{"number":3,"episodes":12,"start":"2023-03-15","end":"2023-05-31"},{"number":4,"episodes":10,"start":"2026-08-05","end":"2026-10-07"}],"cast":[{"person":"Jason Sudeikis","character":"Ted Lasso","image":"https://static.tvmaze.com/uploads/images/medium_portrait/276/690411.jpg"},{"person":"Brendan Hunt","character":"Coach Beard","image":"https://static.tvmaze.com/uploads/images/medium_portrait/276/690417.jpg"},{"person":"Hannah Waddingham","character":"Rebecca Welton","image":"https://static.tvmaze.com/uploads/images/medium_portrait/276/690412.jpg"},{"person":"Jeremy Swift","character":"Leslie Higgins","image":"https://static.tvmaze.com/uploads/images/medium_portrait/276/690414.jpg"},{"person":"Brett Goldstein","character":"Roy Kent","image":"https://static.tvmaze.com/uploads/images/medium_portrait/276/690416.jpg"},{"person":"Juno Temple","character":"Keeley Jones","image":"https://static.tvmaze.com/uploads/images/medium_portrait/276/690413.jpg"},{"person":"Billy Harris","character":"Colin Hughes","image":"https://static.tvmaze.com/uploads/images/medium_portrait/352/880935.jpg"},{"person":"Kola Bokinni","character":"Isaac McAdoo","image":"https://static.tvmaze.com/uploads/images/medium_portrait/352/880939.jpg"}]},{"tvmaze_id":46562,"name":"The Last of Us","premiered":"2023-01-15","ended":null,"show_status":"Running","genres":"Drama, Action, Horror","network":"HBO","channel_kind":"Network","channel_country":"United States","official_site":"https://www.hbo.com/the-last-of-us","runtime":61,"tvmaze_rating":7.9,"language":"English","type":"Scripted","summary":"After a global pandemic destroys civilization, a hardened survivor takes charge of a 14-year-old girl who may be humanity's last hope.","image_url":"https://static.tvmaze.com/uploads/images/medium_portrait/563/1409008.jpg","background_url":"https://static.tvmaze.com/uploads/images/original_untouched/441/1103208.jpg","tvmaze_url":"https://www.tvmaze.com/shows/46562/the-last-of-us","seasons":[{"number":1,"episodes":9,"start":"2023-01-15","end":"2023-03-12"},{"number":2,"episodes":7,"start":"2025-04-13","end":"2025-05-25"}],"cast":[{"person":"Bella Ramsey","character":"Ellie Williams","image":"https://static.tvmaze.com/uploads/images/medium_portrait/564/1412483.jpg"},{"person":"Pedro Pascal","character":"Joel Miller","image":"https://static.tvmaze.com/uploads/images/medium_portrait/564/1412482.jpg"},{"person":"Gabriel Luna","character":"Tommy Miller","image":"https://static.tvmaze.com/uploads/images/medium_portrait/564/1412484.jpg"},{"person":"Isabela Merced","character":"Dina","image":"https://static.tvmaze.com/uploads/images/medium_portrait/564/1412485.jpg"},{"person":"Young Mazino","character":"Jesse","image":"https://static.tvmaze.com/uploads/images/medium_portrait/564/1412486.jpg"}]},{"tvmaze_id":55138,"name":"Arcane: League of Legends","premiered":"2021-11-06","ended":"2024-11-23","show_status":"Ended","genres":"Action, Adventure, Fantasy","network":"Netflix","channel_kind":"Web channel","channel_country":null,"official_site":"https://www.netflix.com/title/81435684","runtime":41,"tvmaze_rating":8.5,"language":"English","type":"Animation","summary":"Set in utopian Piltover and the oppressed underground of Zaun, the story follows the origins of two iconic League champions — and the power that will tear them apart.","image_url":"https://static.tvmaze.com/uploads/images/medium_portrait/536/1340287.jpg","background_url":"https://static.tvmaze.com/uploads/images/original_untouched/442/1107100.jpg","tvmaze_url":"https://www.tvmaze.com/shows/55138/arcane-league-of-legends","seasons":[{"number":1,"episodes":9,"start":"2021-11-06","end":"2021-11-20"},{"number":2,"episodes":9,"start":"2024-11-09","end":"2024-11-23"}],"cast":[{"person":"Kevin Alejandro","character":"Jayce","image":"https://static.tvmaze.com/uploads/images/medium_portrait/549/1374577.jpg"},{"person":"Hailee Steinfeld","character":"Vi","image":"https://static.tvmaze.com/uploads/images/medium_portrait/549/1374575.jpg"},{"person":"Harry Lloyd","character":"Viktor","image":"https://static.tvmaze.com/uploads/images/medium_portrait/549/1374578.jpg"},{"person":"Toks Olagundoye","character":"Mel Medarda","image":"https://static.tvmaze.com/uploads/images/medium_portrait/549/1374579.jpg"},{"person":"Katie Leung","character":"Caitlyn","image":"https://static.tvmaze.com/uploads/images/medium_portrait/549/1374576.jpg"},{"person":"Ella Purnell","character":"Jinx","image":"https://static.tvmaze.com/uploads/images/medium_portrait/549/1374574.jpg"},{"person":"Jason Spisak","character":"Silco","image":"https://static.tvmaze.com/uploads/images/medium_portrait/549/1374584.jpg"},{"person":"Brett Tucker","character":"Singed","image":"https://static.tvmaze.com/uploads/images/medium_portrait/549/1374583.jpg"}]},{"tvmaze_id":16149,"name":"Fleabag","premiered":"2016-07-21","ended":"2019-04-08","show_status":"Ended","genres":"Drama, Comedy","network":"BBC Three","channel_kind":"Web channel","channel_country":"United Kingdom","official_site":"https://www.bbc.co.uk/programmes/p070npjv","runtime":30,"tvmaze_rating":8,"language":"English","type":"Scripted","summary":"Meet Fleabag. She's not talking to all of us - she's talking to you. So why don't you pop your top off and come right in?","image_url":"https://static.tvmaze.com/uploads/images/medium_portrait/192/482341.jpg","background_url":"https://static.tvmaze.com/uploads/images/original_untouched/219/547903.jpg","tvmaze_url":"https://www.tvmaze.com/shows/16149/fleabag","seasons":[{"number":1,"episodes":6,"start":"2016-07-21","end":"2016-08-25"},{"number":2,"episodes":6,"start":"2019-03-04","end":"2019-04-08"}],"cast":[{"person":"Phoebe Waller-Bridge","character":"Fleabag","image":"https://static.tvmaze.com/uploads/images/medium_portrait/184/462312.jpg"}]},{"tvmaze_id":17861,"name":"Dark","premiered":"2017-12-01","ended":"2020-06-27","show_status":"Ended","genres":"Drama, Science-Fiction, Supernatural","network":"Netflix","channel_kind":"Web channel","channel_country":null,"official_site":"https://www.netflix.com/title/80100172","runtime":56,"tvmaze_rating":8.2,"language":"German","type":"Scripted","summary":"A family saga with a supernatural twist, Dark is set in a German town in present day where the disappearance of two young children exposes the double lives and fractured relationships among four families.","image_url":"https://static.tvmaze.com/uploads/images/medium_portrait/504/1262352.jpg","background_url":"https://static.tvmaze.com/uploads/images/original_untouched/219/547866.jpg","tvmaze_url":"https://www.tvmaze.com/shows/17861/dark","seasons":[{"number":1,"episodes":10,"start":"2017-12-01","end":"2017-12-01"},{"number":2,"episodes":8,"start":"2019-06-21","end":"2019-06-21"},{"number":3,"episodes":8,"start":"2020-06-27","end":"2020-06-27"}],"cast":[{"person":"Louis Hofmann","character":"Jonas Kahnwald","image":"https://static.tvmaze.com/uploads/images/medium_portrait/137/343960.jpg"},{"person":"Karoline Eichhorn","character":"Charlotte Doppler","image":"https://static.tvmaze.com/uploads/images/medium_portrait/137/343962.jpg"},{"person":"Stephan Kampwirth","character":"Peter Doppler","image":"https://static.tvmaze.com/uploads/images/medium_portrait/137/344871.jpg"},{"person":"Maja Schöne","character":"Hannah Kahnwald","image":"https://static.tvmaze.com/uploads/images/medium_portrait/137/343975.jpg"},{"person":"Lisa Vicari","character":"Martha Nielsen","image":"https://static.tvmaze.com/uploads/images/medium_portrait/137/343970.jpg"},{"person":"Jördis Triebel","character":"Katharina Nielsen","image":"https://static.tvmaze.com/uploads/images/medium_portrait/137/343961.jpg"},{"person":"Andreas Pietschmann","character":"The Stranger","image":"https://static.tvmaze.com/uploads/images/medium_portrait/137/344231.jpg"},{"person":"Paul Lux","character":"Bartosz Tiedemann","image":"https://static.tvmaze.com/uploads/images/medium_portrait/137/344882.jpg"}]},{"tvmaze_id":37336,"name":"Shōgun","premiered":"2024-02-27","ended":null,"show_status":"Running","genres":"Drama, Adventure, History","network":"Hulu","channel_kind":"Web channel","channel_country":"United States","official_site":"https://www.hulu.com/series/shogun-5422a5f9-e4f1-475e-9217-65e8249388d0","runtime":59,"tvmaze_rating":8.5,"language":"English","type":"Scripted","summary":"Shōgun is set in Japan in the year 1600 at the dawn of a century-defining civil war. Lord Yoshii Toranaga is fighting for his life as his enemies on the Council of Regents unite against him, when a mysterious European ship is found marooned in a nearby fishing village.","image_url":"https://static.tvmaze.com/uploads/images/medium_portrait/506/1265637.jpg","background_url":"https://static.tvmaze.com/uploads/images/original_untouched/506/1265761.jpg","tvmaze_url":"https://www.tvmaze.com/shows/37336/shogun","seasons":[{"number":1,"episodes":10,"start":"2024-02-27","end":"2024-04-23"}],"cast":[{"person":"Cosmo Jarvis","character":"John Blackthorne","image":"https://static.tvmaze.com/uploads/images/medium_portrait/491/1228891.jpg"},{"person":"Anna Sawai","character":"Toda Mariko","image":"https://static.tvmaze.com/uploads/images/medium_portrait/491/1228892.jpg"},{"person":"Tadanobu Asano","character":"Kashigi Yabushige","image":"https://static.tvmaze.com/uploads/images/medium_portrait/491/1228893.jpg"},{"person":"Hiroyuki Sanada","character":"Yoshii Toranaga","image":"https://static.tvmaze.com/uploads/images/medium_portrait/491/1228890.jpg"},{"person":"Takehiro Hira","character":"Ishido Kazunari","image":"https://static.tvmaze.com/uploads/images/medium_portrait/491/1228894.jpg"},{"person":"Fumi Nikaido","character":"Ochiba no Kata","image":"https://static.tvmaze.com/uploads/images/medium_portrait/491/1228899.jpg"},{"person":"Tommy Bastow","character":"Father Martin Alvito","image":"https://static.tvmaze.com/uploads/images/medium_portrait/506/1265593.jpg"}]},{"tvmaze_id":52341,"name":"Andor","premiered":"2022-09-21","ended":"2025-05-13","show_status":"Ended","genres":"Science-Fiction, Thriller, Espionage","network":"Disney+","channel_kind":"Web channel","channel_country":null,"official_site":"https://www.disneyplus.com/series/andor/3xsQKWG00GL5","runtime":48,"tvmaze_rating":7.9,"language":"English","type":"Scripted","summary":"Andor explores a new perspective from the Star Wars galaxy, focusing on Cassian Andor's journey to discover the difference he can make. The series brings forward the tale of the burgeoning rebellion against the Empire and how people and planets became involved. It's an era filled with danger, deception and intrigue where Cassian will embark on the path that is destined to turn him into a rebel hero.","image_url":"https://static.tvmaze.com/uploads/images/medium_portrait/564/1411766.jpg","background_url":"https://static.tvmaze.com/uploads/images/original_untouched/442/1107093.jpg","tvmaze_url":"https://www.tvmaze.com/shows/52341/andor","seasons":[{"number":1,"episodes":12,"start":"2022-09-21","end":"2022-11-23"},{"number":2,"episodes":12,"start":"2025-04-22","end":"2025-05-13"}],"cast":[{"person":"Diego Luna","character":"Cassian Andor","image":"https://static.tvmaze.com/uploads/images/medium_portrait/568/1421865.jpg"},{"person":"Denise Gough","character":"Dedra Meero","image":"https://static.tvmaze.com/uploads/images/medium_portrait/568/1421871.jpg"},{"person":"Stellan Skarsgård","character":"Luthen Rael","image":"https://static.tvmaze.com/uploads/images/medium_portrait/568/1421868.jpg"},{"person":"Genevieve O'Reilly","character":"Mon Mothma","image":"https://static.tvmaze.com/uploads/images/medium_portrait/568/1421870.jpg"},{"person":"Adria Arjona","character":"Bix Caleen","image":"https://static.tvmaze.com/uploads/images/medium_portrait/568/1421867.jpg"},{"person":"Kyle Soller","character":"Syril Karn","image":"https://static.tvmaze.com/uploads/images/medium_portrait/568/1421866.jpg"},{"person":"Anton Lesser","character":"Major Partagaz","image":"https://static.tvmaze.com/uploads/images/medium_portrait/568/1421880.jpg"},{"person":"Elizabeth Dulau","character":"Kleya Marki","image":"https://static.tvmaze.com/uploads/images/medium_portrait/568/1421874.jpg"}]},{"tvmaze_id":179,"name":"The Wire","premiered":"2002-06-02","ended":"2008-03-09","show_status":"Ended","genres":"Drama, Crime","network":"HBO","channel_kind":"Network","channel_country":"United States","official_site":"http://www.hbo.com/the-wire","runtime":60,"tvmaze_rating":8.9,"language":"English","type":"Scripted","summary":"The first season of The Wire (2002) concentrated on the often-futile efforts of police to infiltrate a West Baltimore drug ring headed by Avon Barksdale and his lieutenant, Stringer Bell. In Seasons Two and Three, as the Barksdale investigation escalated, new storylines involving pressures on the working class and the city's political leadership were introduced. Season Four focused on the stories of several young boys in the public school system, struggling with problems at home and the lure of the corner - set against the rise of a new drug empire in West Baltimore and a new Mayor in City Hall. The fifth and final season of The Wire centers on the media's role in addressing - or failing to address - the fundamental political, economic and social realities depicted over the course of the series, while also resolving storylines of the numerous characters woven throughout the narrative arc of the show.","image_url":"https://static.tvmaze.com/uploads/images/medium_portrait/504/1260189.jpg","background_url":"https://static.tvmaze.com/uploads/images/original_untouched/220/550796.jpg","tvmaze_url":"https://www.tvmaze.com/shows/179/the-wire","seasons":[{"number":1,"episodes":13,"start":"2002-06-02","end":"2002-09-08"},{"number":2,"episodes":12,"start":"2003-06-01","end":"2003-08-24"},{"number":3,"episodes":12,"start":"2004-09-19","end":"2004-12-19"},{"number":4,"episodes":13,"start":"2006-09-10","end":"2006-12-10"},{"number":5,"episodes":10,"start":"2008-01-06","end":"2008-03-09"}],"cast":[{"person":"Lance Reddick","character":"Lt. Cedric Daniels","image":"https://static.tvmaze.com/uploads/images/medium_portrait/94/237209.jpg"},{"person":"Sonja Sohn","character":"Det. Shakima \"Kima\" Greggs","image":"https://static.tvmaze.com/uploads/images/medium_portrait/94/237206.jpg"},{"person":"Dominic West","character":"Off. James \"Jimmy\" McNulty","image":"https://static.tvmaze.com/uploads/images/medium_portrait/94/237208.jpg"},{"person":"Clarke Peters","character":"Det. Lester Freamon","image":"https://static.tvmaze.com/uploads/images/medium_portrait/94/237207.jpg"},{"person":"Domenick Lombardozzi","character":"Det. Thomas \"Herc\" Hauk","image":"https://static.tvmaze.com/uploads/images/medium_portrait/94/237204.jpg"},{"person":"Wendell Pierce","character":"Det. William \"Bunk\" Moreland","image":"https://static.tvmaze.com/uploads/images/medium_portrait/94/237221.jpg"},{"person":"Seth Gilliam","character":"Det. Ellis Carver","image":"https://static.tvmaze.com/uploads/images/medium_portrait/1/2536.jpg"},{"person":"Jim True-Frost","character":"Det. Roland \"Prez\" Pryzbylewski","image":"https://static.tvmaze.com/uploads/images/medium_portrait/94/237205.jpg"}]},{"tvmaze_id":385,"name":"Mad Men","premiered":"2007-07-19","ended":"2015-05-17","show_status":"Ended","genres":"Drama","network":"AMC","channel_kind":"Network","channel_country":"United States","official_site":"https://www.amc.com/shows/mad-men--1002238","runtime":60,"tvmaze_rating":8.1,"language":"English","type":"Scripted","summary":"The series revolves around the conflicted world of Don Draper, the biggest ad man in the business, and his colleagues at the Sterling Cooper Draper Pryce Advertising Agency. As Don makes the plays in the boardroom and the bedroom, he struggles to stay a step ahead of the rapidly changing times and the young executives nipping at his heels. The series also depicts authentically the roles of men and women in this era while exploring the true human nature beneath the guise of 1960s traditional family values.","image_url":"https://static.tvmaze.com/uploads/images/medium_portrait/2/5589.jpg","background_url":"https://static.tvmaze.com/uploads/images/original_untouched/396/990282.jpg","tvmaze_url":"https://www.tvmaze.com/shows/385/mad-men","seasons":[{"number":1,"episodes":13,"start":"2007-07-19","end":"2007-10-18"},{"number":2,"episodes":13,"start":"2008-07-27","end":"2008-10-26"},{"number":3,"episodes":13,"start":"2009-08-16","end":"2009-11-08"},{"number":4,"episodes":13,"start":"2010-07-25","end":"2010-10-17"},{"number":5,"episodes":13,"start":"2012-03-25","end":"2012-06-10"},{"number":6,"episodes":13,"start":"2013-04-07","end":"2013-06-23"},{"number":7,"episodes":14,"start":"2014-04-13","end":"2015-05-17"}],"cast":[{"person":"John Slattery","character":"Roger Sterling","image":"https://static.tvmaze.com/uploads/images/medium_portrait/2/5595.jpg"},{"person":"Jon Hamm","character":"Don Draper","image":"https://static.tvmaze.com/uploads/images/medium_portrait/2/5590.jpg"},{"person":"Elisabeth Moss","character":"Peggy Olson","image":"https://static.tvmaze.com/uploads/images/medium_portrait/2/5592.jpg"},{"person":"Kiernan Shipka","character":"Sally Draper","image":"https://static.tvmaze.com/uploads/images/medium_portrait/2/5597.jpg"},{"person":"Vincent Kartheiser","character":"Pete Campbell","image":"https://static.tvmaze.com/uploads/images/medium_portrait/2/5593.jpg"},{"person":"Robert Morse","character":"Bertram Cooper","image":"https://static.tvmaze.com/uploads/images/medium_portrait/2/5601.jpg"},{"person":"Christina Hendricks","character":"Joan Holloway","image":"https://static.tvmaze.com/uploads/images/medium_portrait/2/5594.jpg"},{"person":"Rich Sommer","character":"Harry Crane","image":"https://static.tvmaze.com/uploads/images/medium_portrait/2/5605.jpg"}]},{"tvmaze_id":30770,"name":"Chernobyl","premiered":"2019-05-06","ended":"2019-06-03","show_status":"Ended","genres":"Drama, History","network":"HBO","channel_kind":"Network","channel_country":"United States","official_site":"https://www.hbo.com/chernobyl","runtime":70,"tvmaze_rating":8.9,"language":"English","type":"Scripted","summary":"Chernobyl dramatizes the true story of one of the worst man-made catastrophes in history and tells of the brave men and women who sacrificed to save Europe from unimaginable disaster. The miniseries focuses on the heartbreaking scope of the nuclear plant disaster that occurred in Ukraine in April 1986, revealing how and why it happened and telling the shocking, remarkable stories of the heroes who fought and fell.","image_url":"https://static.tvmaze.com/uploads/images/medium_portrait/193/482599.jpg","background_url":"https://static.tvmaze.com/uploads/images/original_untouched/213/533685.jpg","tvmaze_url":"https://www.tvmaze.com/shows/30770/chernobyl","seasons":[{"number":1,"episodes":5,"start":"2019-05-06","end":"2019-06-03"}],"cast":[{"person":"Jared Harris","character":"Valery Legasov","image":"https://static.tvmaze.com/uploads/images/medium_portrait/200/501796.jpg"},{"person":"Stellan Skarsgård","character":"Boris Shcherbina","image":"https://static.tvmaze.com/uploads/images/medium_portrait/200/501797.jpg"},{"person":"Jessie Buckley","character":"Lyudmilla Ignatenko","image":"https://static.tvmaze.com/uploads/images/medium_portrait/196/491052.jpg"},{"person":"Emily Watson","character":"Ulana Khomyuk","image":"https://static.tvmaze.com/uploads/images/medium_portrait/200/501795.jpg"},{"person":"Paul Ritter","character":"Anatoly Dyatlov","image":"https://static.tvmaze.com/uploads/images/medium_portrait/196/491069.jpg"},{"person":"Sam Troughton","character":"Alexandr Akimov","image":"https://static.tvmaze.com/uploads/images/medium_portrait/200/502066.jpg"},{"person":"Adam Nagaitis","character":"Vasily Ignatenko","image":"https://static.tvmaze.com/uploads/images/medium_portrait/196/491156.jpg"},{"person":"Robert Emms","character":"Leonid Toptunov","image":"https://static.tvmaze.com/uploads/images/medium_portrait/196/491067.jpg"}]},{"tvmaze_id":6508,"name":"Atlanta","premiered":"2016-09-06","ended":"2022-11-10","show_status":"Ended","genres":"Drama, Comedy, Music","network":"FX","channel_kind":"Network","channel_country":"United States","official_site":"https://www.fxnetworks.com/shows/atlanta","runtime":30,"tvmaze_rating":6.9,"language":"English","type":"Scripted","summary":"Two cousins work through the Atlanta music scene in order to better their lives and the lives of their families.","image_url":"https://static.tvmaze.com/uploads/images/medium_portrait/437/1093345.jpg","background_url":"https://static.tvmaze.com/uploads/images/original_untouched/73/184048.jpg","tvmaze_url":"https://www.tvmaze.com/shows/6508/atlanta","seasons":[{"number":1,"episodes":10,"start":"2016-09-06","end":"2016-11-01"},{"number":2,"episodes":11,"start":"2018-03-01","end":"2018-05-10"},{"number":3,"episodes":10,"start":"2022-03-24","end":"2022-05-19"},{"number":4,"episodes":10,"start":"2022-09-15","end":"2022-11-10"}],"cast":[{"person":"Donald Glover","character":"Earnest ‘Earn' Marks","image":"https://static.tvmaze.com/uploads/images/medium_portrait/527/1317696.jpg"},{"person":"Brian Tyree Henry","character":"Alfred 'Paper Boi' Miles","image":"https://static.tvmaze.com/uploads/images/medium_portrait/527/1317697.jpg"},{"person":"LaKeith Stanfield","character":"Darius Epps","image":"https://static.tvmaze.com/uploads/images/medium_portrait/527/1317698.jpg"},{"person":"Zazie Beetz","character":"Vanessa 'Van' Keefer","image":"https://static.tvmaze.com/uploads/images/medium_portrait/527/1317699.jpg"}]},{"tvmaze_id":156,"name":"Twin Peaks","premiered":"1990-04-08","ended":"2017-09-03","show_status":"Ended","genres":"Crime, Mystery, Supernatural","network":"Paramount+ with Showtime","channel_kind":"Network","channel_country":"United States","official_site":"http://www.sho.com/twin-peaks","runtime":60,"tvmaze_rating":8,"language":"English","type":"Scripted","summary":"Set in the fictional town of Twin Peaks in northeast Washington state, this is the story of FBI Special Agent Dale Cooper and his investigation of the murder of a popular local teenage schoolgirl, Laura Palmer.","image_url":"https://static.tvmaze.com/uploads/images/medium_portrait/397/992910.jpg","background_url":"https://static.tvmaze.com/uploads/images/original_untouched/223/557837.jpg","tvmaze_url":"https://www.tvmaze.com/shows/156/twin-peaks","seasons":[{"number":1,"episodes":8,"start":"1990-04-08","end":"1990-05-23"},{"number":2,"episodes":22,"start":"1990-09-30","end":"1991-06-10"},{"number":3,"episodes":18,"start":"2017-05-21","end":"2017-09-03"}],"cast":[{"person":"Kyle MacLachlan","character":"Special Agent Dale Cooper","image":"https://static.tvmaze.com/uploads/images/medium_portrait/378/945612.jpg"},{"person":"Michael Horse","character":"Deputy Tommy \"Hawk\" Hill","image":"https://static.tvmaze.com/uploads/images/medium_portrait/103/257737.jpg"},{"person":"Richard Beymer","character":"Benjamin Horne","image":"https://static.tvmaze.com/uploads/images/medium_portrait/0/2159.jpg"},{"person":"Kimmy Robertson","character":"Lucy Moran","image":"https://static.tvmaze.com/uploads/images/medium_portrait/103/257733.jpg"},{"person":"Harry Goaz","character":"Deputy Andy Brennan","image":"https://static.tvmaze.com/uploads/images/medium_portrait/103/257729.jpg"},{"person":"Mädchen Amick","character":"Shelly Johnson","image":"https://static.tvmaze.com/uploads/images/medium_portrait/0/2160.jpg"},{"person":"Dana Ashbrook","character":"Bobby Briggs","image":"https://static.tvmaze.com/uploads/images/medium_portrait/0/2161.jpg"},{"person":"Sherilyn Fenn","character":"Audrey Horne","image":"https://static.tvmaze.com/uploads/images/medium_portrait/0/2163.jpg"}]}];
+// Invented sample tracking data for "demo_user" (CollectionEntry rows).
+const SEED = [
+  {id:101, tvmaze_id:169,   status:"completed",     season:5, episode:16, rating:5, notes:"Rewatch someday. Ozymandias is the best hour of TV I've seen.", created:"2026-03-02", updated:"2026-11-02"},
+  {id:102, tvmaze_id:526,   status:"watching",      season:4, episode:9,  rating:4, notes:"Comfort show.", created:"2026-01-15", updated:"2026-11-13"},
+  {id:103, tvmaze_id:44933, status:"watching",      season:2, episode:4,  rating:5, notes:"Theory: the goats matter. Write down the Kier quotes.", created:"2026-10-01", updated:"2026-11-14"},
+  {id:104, tvmaze_id:2993,  status:"on_hold",       season:3, episode:2,  rating:3, notes:"Paused until friends catch up.", created:"2025-12-10", updated:"2026-09-20"},
+  {id:105, tvmaze_id:54198, status:"plan_to_watch", season:null, episode:null, rating:null, notes:"", created:"2026-11-10", updated:"2026-11-10"},
+  {id:106, tvmaze_id:55350, status:"watching",      season:1, episode:7,  rating:4, notes:"", created:"2026-10-20", updated:"2026-11-11"},
+  {id:107, tvmaze_id:618,   status:"plan_to_watch", season:null, episode:null, rating:null, notes:"Start after finishing Breaking Bad recap.", created:"2026-10-28", updated:"2026-10-28"},
+  {id:108, tvmaze_id:23470, status:"completed",     season:4, episode:10, rating:5, notes:"", created:"2026-05-01", updated:"2026-08-15"},
+  {id:109, tvmaze_id:44458, status:"dropped",       season:2, episode:3,  rating:2, notes:"Lost interest in season 2.", created:"2026-04-11", updated:"2026-07-01"},
+  {id:110, tvmaze_id:46562, status:"watching",      season:2, episode:1,  rating:4, notes:"", created:"2026-09-01", updated:"2026-11-09"},
+  {id:111, tvmaze_id:55138, status:"completed",     season:2, episode:9,  rating:5, notes:"Animation is unreal.", created:"2026-06-01", updated:"2026-06-30"},
+  {id:112, tvmaze_id:16149, status:"plan_to_watch", season:null, episode:null, rating:null, notes:"", created:"2026-11-12", updated:"2026-11-12"},
+  {id:113, tvmaze_id:17861, status:"on_hold",       season:1, episode:6,  rating:4, notes:"Need a family tree diagram before continuing.", created:"2026-09-15", updated:"2026-10-05"},
+  {id:114, tvmaze_id:37336, status:"plan_to_watch", season:null, episode:null, rating:null, notes:"", created:"2026-11-15", updated:"2026-11-15"},
+];
+const STATUSES = [["watching","Watching","--st-watching"],["plan_to_watch","Plan to Watch","--st-plan"],["on_hold","On Hold","--st-hold"],["completed","Completed","--st-done"],["dropped","Dropped","--st-drop"]];
+const SORTS = [["-updated","Recently updated"],["title","Title (A–Z)"],["-rating","My rating (high–low)"]];
+const PAGE_SIZE = 12, NOTES_MAX = 2000, TODAY = "2026-11-15";
+
+/* ======================= STATE ======================= */
+const state = { entries: SEED.map(e => ({...e})), nextId: 200, empty: false, noBg: false, msg: "" };
+const showById = id => SHOWS.find(s => s.tvmaze_id === +id);
+const myEntries = () => state.empty ? [] : state.entries;
+const entryFor = tvId => myEntries().find(e => e.tvmaze_id === +tvId);
+
+/* ======================= PURE LOGIC ======================= */
+function queryCollection(entries, {status, q, sort, page}) {
+  let rows = entries.map(e => ({...e, show: showById(e.tvmaze_id)}));
+  const counts = {"": rows.length}; STATUSES.forEach(([k]) => counts[k] = rows.filter(r => r.status === k).length);
+  if (status) rows = rows.filter(r => r.status === status);
+  if (q) rows = rows.filter(r => r.show.name.toLowerCase().includes(q.toLowerCase()));
+  const cmp = {"-updated": (a,b) => b.updated.localeCompare(a.updated),
+               "title": (a,b) => a.show.name.localeCompare(b.show.name),
+               "-rating": (a,b) => (b.rating ?? 0) - (a.rating ?? 0) || a.show.name.localeCompare(b.show.name)}[sort] || ((a,b) => b.updated.localeCompare(a.updated));
+  rows.sort(cmp);
+  const total = rows.length, pages = Math.max(1, Math.ceil(total / PAGE_SIZE)), p = Math.min(Math.max(1, page || 1), pages);
+  return {items: rows.slice((p-1)*PAGE_SIZE, p*PAGE_SIZE), total, pages, page: p, counts};
+}
+// Same rules we approved for CollectionEntry.
+function validateTracking({status, season, episode, rating, notes}) {
+  const errors = {};
+  if (!STATUSES.some(([k]) => k === status)) errors.status = "Choose a status.";
+  const isPosInt = v => /^[1-9]\d*$/.test(v);
+  if (season !== "" && !isPosInt(season)) errors.season = "Season must be a whole number of 1 or more.";
+  if (episode !== "" && !isPosInt(episode)) errors.episode = "Episode must be a whole number of 1 or more.";
+  if (!errors.season && !errors.episode && ((season === "") !== (episode === "")))
+    errors.progress = "Enter both season and episode, or leave both blank.";
+  if (rating !== null && !(rating >= 1 && rating <= 5)) errors.rating = "Rating must be 1 to 5 stars.";
+  if (notes.length > NOTES_MAX) errors.notes = `Notes can be at most ${NOTES_MAX} characters (now ${notes.length}).`;
+  return errors;
+}
+// "Suggested": shows that share genres with this one, ranked by overlap. Local data only, NOT a TVmaze feature.
+function suggestedFor(show) {
+  const g = new Set(show.genres.split(", ").filter(Boolean));
+  return SHOWS.filter(s => s.tvmaze_id !== show.tvmaze_id)
+    .map(s => ({s, n: s.genres.split(", ").filter(x => g.has(x)).length})).filter(x => x.n > 0)
+    .sort((a,b) => b.n - a.n || a.s.name.localeCompare(b.s.name)).map(x => x.s);
+}
+
+/* ======================= FORMAT HELPERS ======================= */
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const stLabel = k => (STATUSES.find(s => s[0] === k) || [k, "All"])[1];
+const stColor = k => `var(${(STATUSES.find(s => s[0] === k) || [,,"--st-plan"])[2]})`;
+const year = d => d ? d.slice(0,4) : "N/A";
+function years(s) { const a = year(s.premiered); if (!s.ended) return s.show_status === "Running" ? `${a}–present` : a; const b = year(s.ended); return a === b ? a : `${a}–${b}`; }
+const progress = e => e && e.season ? `S${e.season} · E${e.episode}` : "Not started";
+const progressLong = e => e && e.season ? `Season ${e.season}, Episode ${e.episode}` : "Not started";
+function stars(r) { if (!r) return `<span class="dim" style="font-size:.78rem">Not rated</span>`;
+  return `<span class="stars" aria-label="${r} of 5 stars">${"★".repeat(r)}<span class="off">${"★".repeat(5-r)}</span></span>`; }
+const bg = s => state.noBg ? null : s.background_url;
+const posterImg = (s, extra="") => s.image_url ? `<img src="${esc(s.image_url)}" alt="${esc(s.name)} poster" loading="lazy" ${extra}>` : `<div class="fallback-art">${esc(s.name[0])}</div>`;
+const wideImg = s => bg(s) ? `<img src="${esc(bg(s))}" alt="" loading="lazy">` : posterImg(s, 'style="object-position:center 20%"');
+function metaBadges(s, {includeRating = true} = {}) {
+  const b = [];
+  if (s.show_status) b.push(`<span class="mbadge solid">${esc(s.show_status.toUpperCase())}</span>`);
+  if (s.type) b.push(`<span class="mbadge">${esc(s.type.toUpperCase())}</span>`);
+  if (s.runtime) b.push(`<span class="mbadge"><i class="bi bi-clock"></i>${s.runtime} MIN</span>`);
+  if (s.language) b.push(`<span class="mbadge">${esc(s.language.toUpperCase())}</span>`);
+  if (includeRating && s.tvmaze_rating) b.push(`<span class="mbadge"><i class="bi bi-star-fill"></i>${s.tvmaze_rating} TVMAZE</span>`);
+  return `<div class="badges">${b.join("")}</div>`;
+}
+const metaLine = s => [year(s.premiered), s.genres, s.network].filter(Boolean).map(esc).join('<span class="dot">•</span>');
+function heroBg(s) {
+  const b = bg(s);
+  return b ? `<div class="hero-bg" style="background-image:url('${esc(b)}')"></div>`
+           : `<div class="hero-bg" style="background-image:url('${esc(s.image_url)}')"></div>${s.image_url ? `<img class="hero-poster" src="${esc(s.image_url)}" alt="">` : ""}`;
+}
+function addButton(s, entry, label = "ADD TO COLLECTION") {
+  return entry
+    ? `<a class="btn-pill btn-saved" href="#/show/${s.tvmaze_id}?tab=tracking"><i class="bi bi-check-lg"></i>IN YOUR COLLECTION</a>`
+    : `<button class="btn-pill btn-ghost" data-act="add" data-id="${s.tvmaze_id}"><i class="bi bi-plus-lg"></i>${label}</button>`;
+}
+const footer = `<footer class="site px-edge">Show information and images from <a href="https://www.tvmaze.com" target="_blank" rel="noopener">TVmaze</a>, licensed
+  <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>. HTTP.tv is a tracking app; it does not stream video.</footer>`;
+
+/* ======================= ROUTER ======================= */
+function parseRoute() {
+  const raw = location.hash.slice(1) || "/";
+  const [path, qs] = raw.split("?");
+  return {parts: path.split("/").filter(Boolean), params: new URLSearchParams(qs || "")};
+}
+function navActive(r) {
+  const [p0] = r.parts, st = r.params.get("status");
+  if (!p0) return "home"; if (p0 === "discover") return "discover";
+  if (p0 === "collection") return st === "watching" ? "watching" : st === "completed" ? "completed" : "collection";
+  return "";
+}
+
+/* ======================= VIEWS ======================= */
+function renderNav(active) {
+  const items = [["home","#/","bi-house-door","Home"],["discover","#/discover","bi-compass","Discover"],["collection","#/collection","bi-collection","My Collection"],
+                 ["watching","#/collection?status=watching","bi-eye","Watching"],["completed","#/collection?status=completed","bi-check2-circle","Completed"]];
+  return `<a class="profile" href="#/collection" aria-label="demo_user's collection"><span class="avatar">D</span><span class="uname">demo_user</span></a>
+    <nav class="mainnav" aria-label="Main"><a class="brand" href="#/">HTTP<span>.tv</span></a>
+      ${items.map(([k,h,ic,l]) => `<a class="navlink ${active===k?"active":""}" href="${h}" ${active===k?'aria-current="page"':""} title="${l}"><i class="bi ${ic}"></i><span>${l}</span></a>`).join("")}</nav>
+    <a class="nav-search ${active==="discover"?"active":""}" href="#/discover" aria-label="Search TVmaze"><i class="bi bi-search"></i></a>`;
+}
+
+function rail(title, sub, tiles) {
+  if (!tiles.length) return "";
+  return `<section class="rail-section px-edge"><h2 class="rail-title">${title}${sub ? `<small>${sub}</small>` : ""}</h2>
+    <div class="rail-wrap"><button class="rail-btn prev" data-act="scroll" data-dir="-1" aria-label="Scroll left">‹</button>
+    <div class="rail">${tiles.join("")}</div>
+    <button class="rail-btn next" data-act="scroll" data-dir="1" aria-label="Scroll right">›</button></div></section>`;
+}
+// The ONE caption format for a show card everywhere: title / status / progress.
+function caption(s, e) {
+  const status = e ? `<span class="sdot" style="background:${stColor(e.status)}"></span>${stLabel(e.status)}` : `<i class="bi bi-plus-circle"></i>Not in your collection`;
+  const second = e ? progressLong(e) : esc(s.genres || years(s));
+  return `<div class="cap-t clamp-1">${esc(s.name)}</div><div class="cap-s">${status}</div><div class="cap-p ${e && e.season ? "started" : ""}">${second}</div>`;
+}
+// The ONE card used by every rail: same size rules, hover, saved-flag and caption.
+// flag=false on rows that only ever contain your own shows (the check would be on every card).
+function tile(s, {wide = false, href, flag = true} = {}) {
+  const e = entryFor(s.tvmaze_id);
+  return `<a class="tile ${wide ? "tile-wide" : "tile-poster"}" href="${href || `#/show/${s.tvmaze_id}`}">
+    <div class="art">${wide ? wideImg(s) : posterImg(s)}${e && flag ? '<span class="tile-flag" title="In your collection"><i class="bi bi-check-lg"></i></span>' : ""}</div>
+    ${caption(s, e)}</a>`;
+}
+
+function viewHome() {
+  const mine = myEntries().map(e => ({...e, show: showById(e.tvmaze_id)}));
+  const byUpdated = [...mine].sort((a,b) => b.updated.localeCompare(a.updated));
+  const featured = byUpdated.find(e => e.status === "watching") || byUpdated[0];
+  let hero;
+  if (featured) {
+    const s = featured.show;
+    hero = `<section class="hero ${bg(s) ? "" : "hero--poster"}">${heroBg(s)}<div class="hero-shade"></div>
+      <div class="hero-content px-edge"><div class="hero-text">
+        <div class="eyebrow">${featured.status === "watching" ? `Continue tracking · ${progressLong(featured)}` : `Recently updated · ${stLabel(featured.status)}`}</div>
+        <h1 class="hero-title">${esc(s.name)}</h1>
+        ${metaBadges(s)}
+        <div class="hero-meta">${metaLine(s)}</div>
+        <p class="hero-desc clamp-2">${esc(s.summary)}</p>
+        <div class="d-flex flex-wrap gap-3"><a class="btn-pill btn-white" href="#/show/${s.tvmaze_id}">More info</a>${addButton(s, entryFor(s.tvmaze_id))}</div>
+      </div></div></section>`;
+  } else {
+    hero = `<section class="hero" style="min-height:clamp(420px,62vh,640px);background:radial-gradient(ellipse at 70% 30%, #1E3A8A 0%, var(--bg) 60%)">
+      <div class="hero-content px-edge"><div class="hero-text">
+        <div class="eyebrow">Welcome to HTTP.tv</div><h1 class="hero-title">Track every show you watch.</h1>
+        <p class="hero-desc">Search TVmaze, save shows to your collection, and keep your progress, ratings and notes in one place.</p>
+        <a class="btn-pill btn-white" href="#/discover"><i class="bi bi-search"></i>Discover shows</a></div></div></section>`;
+  }
+  const watching = byUpdated.filter(e => e.status === "watching" && e !== featured);
+  const watchlist = byUpdated.filter(e => e.status === "plan_to_watch");
+  const recent = [...mine].sort((a,b) => b.created.localeCompare(a.created)).slice(0, 10);
+  const completed = byUpdated.filter(e => e.status === "completed");
+  return hero + `<div style="margin-top:-20px;position:relative">
+    ${rail("Continue Tracking", "Watching, most recently updated", watching.map(e => tile(e.show, {wide: true, flag: false, href: `#/show/${e.tvmaze_id}?tab=tracking`})))}
+    ${rail("My Watchlist", "Plan to Watch", watchlist.map(e => tile(e.show, {flag: false})))}
+    ${rail("Recently Added", "Newest saves first", recent.map(e => tile(e.show, {flag: false})))}
+    ${rail("Completed Shows", "", completed.map(e => tile(e.show, {flag: false})))}
+  </div>` + footer;
+}
+
+function viewShow(id, params) {
+  const s = showById(id);
+  if (!s) return `<div class="page-top px-edge"><h1 class="page-title">Show not found</h1><a href="#/discover" class="muted">Search TVmaze</a></div>`;
+  const entry = entryFor(id);
+  const tab = params.get("tab") || (entry ? "tracking" : "suggested");
+  const tabs = [...(entry ? [["tracking","MY TRACKING"]] : []), ["suggested","SUGGESTED"], ["extras","EXTRAS"], ["franchise","FRANCHISE"]];
+  const actions = entry
+    ? `<a class="btn-pill btn-white" href="#/show/${id}?tab=tracking" data-act="totracking"><i class="bi bi-pencil"></i>Edit my progress</a>`
+    : `<button class="btn-pill btn-white" data-act="add" data-id="${id}"><i class="bi bi-plus-lg"></i>Add to my collection</button>`;
+  let panel = "";
+  if (tab === "tracking" && entry) panel = trackingPanel(s, entry);
+  else if (tab === "extras") panel = extrasPanel(s);
+  else if (tab === "franchise") panel = `<div class="empty-panel"><div class="label-caps">Franchise</div>
+      <p class="muted mb-1">TVmaze doesn't say which shows belong to the same franchise or are spin-offs, so HTTP.tv can't list them without guessing.</p>
+      <p class="note-line">Prototype placeholder: this tab stays empty unless a verified source is added later.</p></div>`;
+  else { const sug = suggestedFor(s);
+    panel = `<p class="note-line">Shows on HTTP.tv that share at least one genre with ${esc(s.name)} (${esc(s.genres)}). Matched locally by genre; not a TVmaze recommendation.</p>
+      <div class="rail-wrap"><button class="rail-btn prev" data-act="scroll" data-dir="-1" aria-label="Scroll left">‹</button>
+      <div class="rail">${sug.map(x => tile(x, {wide: true})).join("")}</div>
+      <button class="rail-btn next" data-act="scroll" data-dir="1" aria-label="Scroll right">›</button></div>`; }
+
+  const chan = s.network ? `<a class="provider" href="${esc(s.official_site || s.tvmaze_url)}" target="_blank" rel="noopener">
+      <span class="logo">${esc(s.network.replace(/[^A-Za-z0-9 ]/g,"").split(" ").map(w => w[0]).join("").slice(0,3))}</span>
+      <span><span class="p1 d-block">${esc(s.network)}</span><span class="p2">Original ${s.channel_kind === "Network" ? "network" : "web channel"}${s.channel_country ? ` · ${esc(s.channel_country)}` : ""} · verified by TVmaze</span></span></a>` : `<span class="muted">No network or web channel listed on TVmaze.</span>`;
+
+  return `<section class="hero detail-hero ${bg(s) ? "" : "hero--poster"}">${heroBg(s)}<div class="hero-shade"></div>
+    <div class="hero-content px-edge"><div class="row g-4 align-items-end">
+      <div class="col-lg-6">
+        ${entry ? `<div class="eyebrow"><span class="sdot me-2" style="background:${stColor(entry.status)}"></span>${stLabel(entry.status)} · ${progressLong(entry)}</div>` : ""}
+        <h1 class="hero-title">${esc(s.name)}</h1>
+        ${metaBadges(s)}
+        <div class="hero-meta">${[years(s), s.genres].filter(Boolean).map(esc).join('<span class="dot">•</span>')}</div>
+        <div class="d-flex flex-wrap gap-3 mb-4">${actions}
+          <a class="btn-pill btn-ghost" href="${esc(s.tvmaze_url)}" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i>View on TVmaze</a></div>
+        <div class="label-caps">Where to watch · ${s.channel_kind === "Network" ? "original network" : s.channel_kind ? "original web channel" : "network"}</div>
+        <div class="watch-row mb-2">${chan}</div>
+      </div>
+      <div class="col-lg-5 offset-lg-1"><div class="desc-panel"><div class="label-caps">Summary</div><p>${esc(s.summary) || "TVmaze has no summary for this show."}</p></div></div>
+    </div></div></section>
+    <section class="px-edge" style="position:relative;margin-top:6px">
+      <nav class="tabbar" aria-label="Show sections">${tabs.map(([k,l]) => `<a href="#/show/${id}?tab=${k}" class="${tab===k?"active":""}">${l}</a>`).join("")}</nav>
+      ${panel}
+    </section>` + footer;
+}
+
+function extrasPanel(s) {
+  const seasons = s.seasons.map(x => `<div class="season-card"><div class="label-caps mb-1">Season ${x.number}</div>
+      <div class="fs-5 fw-bold">${x.episodes ? `${x.episodes} episodes` : "Episodes TBA"}</div>
+      <div class="muted small">${year(x.start)}${x.end && year(x.end) !== year(x.start) ? `–${year(x.end)}` : ""}</div></div>`).join("");
+  const cast = s.cast.map(c => `<div class="cast-card">${c.image ? `<img src="${esc(c.image)}" alt="" loading="lazy">` : `<div class="fallback-art">${esc(c.person[0])}</div>`}
+      <div class="fw-semibold small">${esc(c.person)}</div><div class="dim" style="font-size:.75rem">${esc(c.character)}</div></div>`).join("");
+  return `<p class="note-line">Seasons and cast come from TVmaze (real data).</p>
+    <div class="rail-title mt-3">Seasons</div><div class="rail-wrap"><div class="rail">${seasons || '<span class="muted">No seasons listed.</span>'}</div></div>
+    <div class="rail-title">Cast</div><div class="rail-wrap"><div class="rail">${cast || '<span class="muted">No cast listed.</span>'}</div></div>`;
+}
+
+function trackingPanel(s, e, errors = {}, draft = null) {
+  const d = draft || {status: e.status, season: e.season ?? "", episode: e.episode ?? "", rating: e.rating, notes: e.notes};
+  const err = k => errors[k] ? `<div class="err">${esc(errors[k])}</div>` : "";
+  return `<form class="track-panel form-dark" data-act="save" data-entry="${e.id}" novalidate>
+    <div class="track-grid">
+      <section class="tpanel" aria-labelledby="h-progress">
+        <div class="label-caps" id="h-progress">Status &amp; progress</div>
+        <label class="form-label" for="f-status">Status</label>
+        <select class="form-select" id="f-status" name="status">${STATUSES.map(([k,l]) => `<option value="${k}" ${d.status===k?"selected":""}>${l}</option>`).join("")}</select>${err("status")}
+        <div class="row g-3 mt-1">
+          <div class="col-6"><label class="form-label" for="f-season">Season</label><input class="form-control" id="f-season" name="season" inputmode="numeric" placeholder="—" value="${esc(d.season)}">${err("season")}</div>
+          <div class="col-6"><label class="form-label" for="f-episode">Episode</label><input class="form-control" id="f-episode" name="episode" inputmode="numeric" placeholder="—" value="${esc(d.episode)}">${err("episode")}</div>
+        </div>${err("progress")}
+        <div class="dim mt-2" style="font-size:.75rem">Last episode you watched. Leave both blank if you haven't started.</div>
+      </section>
+      <section class="tpanel" aria-labelledby="h-rating">
+        <div class="label-caps" id="h-rating">My rating</div>
+        <div class="star-input" role="radiogroup" aria-label="My rating">
+          ${[1,2,3,4,5].map(n => `<button type="button" role="radio" aria-checked="${d.rating===n}" aria-label="${n} star${n>1?"s":""}" data-act="star" data-v="${n}" class="${d.rating>=n?"on":""}">★</button>`).join("")}</div>
+        <div class="rating-text" id="rating-text">${d.rating ? `${d.rating} <small>of 5</small>` : `<small>Not rated</small>`}</div>
+        <div class="mt-auto pt-3"><button type="button" class="btn btn-link btn-sm text-secondary p-0" data-act="star" data-v="0">Clear rating</button></div>
+        <input type="hidden" name="rating" value="${d.rating ?? ""}">${err("rating")}
+      </section>
+      <section class="tpanel tpanel-notes" aria-labelledby="h-notes">
+        <div class="d-flex justify-content-between align-items-baseline"><label class="label-caps" id="h-notes" for="f-notes">Notes</label>
+          <span class="dim" style="font-size:.75rem" id="notes-count">${d.notes.length} / ${NOTES_MAX}</span></div>
+        <textarea class="form-control" id="f-notes" name="notes" placeholder="Theories, favourite episodes, where you left off…">${esc(d.notes)}</textarea>${err("notes")}
+      </section>
+    </div>
+    <div class="track-actions">
+      <button class="btn-pill btn-white" type="submit"><i class="bi bi-check-lg"></i>Save tracking</button>
+      <a class="btn-pill btn-ghost" href="#/show/${s.tvmaze_id}/remove" style="border-color:rgba(252,165,165,.6);color:#FCA5A5"><i class="bi bi-trash3"></i>Remove</a>
+      <span class="dim small ms-lg-auto">Saved ${e.created} · last updated ${e.updated}</span>
+    </div></form>`;
+}
+
+function viewCollection(params) {
+  const status = params.get("status") || "", q = (params.get("q") || "").trim(), sort = params.get("sort") || "-updated", page = +params.get("page") || 1;
+  const r = queryCollection(myEntries(), {status, q, sort, page});
+  const qs = over => { const p = new URLSearchParams({status, q, sort, page: 1, ...over}); [...p.keys()].forEach(k => { if (!p.get(k) || (k==="sort" && p.get(k)==="-updated") || (k==="page" && p.get(k)==="1")) p.delete(k); }); const t = p.toString(); return "#/collection" + (t ? "?" + t : ""); };
+  const chips = [["", "All"], ...STATUSES.map(([k,l]) => [k,l])].map(([k,l]) => `<a class="chip ${status===k?"active":""}" href="${qs({status:k})}">${k ? `<span class="sdot" style="background:${stColor(k)}"></span>` : ""}${l}<span class="n">${r.counts[k]}</span></a>`).join("");
+  const glow = r.items[0] && bg(r.items[0].show) ? `<div class="page-glow" style="background-image:url('${esc(bg(r.items[0].show))}')"></div>` : "";
+  const title = status === "watching" ? "Watching" : status === "completed" ? "Completed" : "My Collection";
+  const cards = r.items.map(e => `<a class="pcard" href="#/show/${e.tvmaze_id}?tab=tracking">
+      <div class="art">${posterImg(e.show)}<div class="hover-cta"><span>UPDATE TRACKING</span></div></div>
+      ${caption(e.show, e)}
+      <div class="mt-1">${stars(e.rating)}</div></a>`).join("");
+  let body;
+  if (!r.total && !r.counts[""]) body = `<div class="empty-state"><i class="bi bi-collection"></i><h2 class="h4 mt-3">Your collection is empty</h2>
+      <p class="muted">Search TVmaze to find shows and save them here.</p><a class="btn-pill btn-white mt-2" href="#/discover"><i class="bi bi-search"></i>Discover shows</a></div>`;
+  else if (!r.total) body = `<div class="empty-state"><i class="bi bi-search"></i><h2 class="h5 mt-3">No shows match</h2>
+      <p class="muted">${q ? `Nothing titled “${esc(q)}”` : "Nothing"} in ${status ? stLabel(status) : "your collection"}.</p><a class="muted text-decoration-underline" href="#/collection">Clear filters</a></div>`;
+  else {
+    let pager = "";
+    if (r.pages > 1) { pager = `<nav class="pager" aria-label="Pages">${r.page > 1 ? `<a href="${qs({page:r.page-1})}">‹</a>` : `<span class="off">‹</span>`}`;
+      for (let i = 1; i <= r.pages; i++) pager += i === r.page ? `<span class="cur" aria-current="page">${i}</span>` : `<a href="${qs({page:i})}">${i}</a>`;
+      pager += `${r.page < r.pages ? `<a href="${qs({page:r.page+1})}">›</a>` : `<span class="off">›</span>`}</nav>`; }
+    body = `<div class="poster-grid">${cards}</div>${pager}`;
+  }
+  return `<div class="page-top">${glow}<div class="px-edge" style="position:relative">
+    <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
+      <div><h1 class="page-title mb-1">${title}</h1><div class="muted">${r.counts[""]} show${r.counts[""] === 1 ? "" : "s"} saved · ${r.total} shown</div></div>
+      <form class="toolbar d-flex flex-wrap gap-2" data-act="colsearch" role="search">
+        <input type="hidden" name="status" value="${esc(status)}">
+        <input class="form-control" style="width:min(260px,100%)" name="q" type="search" placeholder="Search my shows by title" value="${esc(q)}" aria-label="Search my shows">
+        <select class="form-select" style="width:auto" name="sort" data-act="autosubmit" aria-label="Sort by">${SORTS.map(([k,l]) => `<option value="${k}" ${k===sort?"selected":""}>${l}</option>`).join("")}</select>
+      </form>
+    </div>
+    <div class="chips mb-4">${chips}</div>
+    ${body}</div></div>` + footer;
+}
+
+function viewDiscover(params) {
+  const q = (params.get("q") || "").trim();
+  const results = q ? SHOWS.filter(s => s.name.toLowerCase().includes(q.toLowerCase()) || s.genres.toLowerCase().includes(q.toLowerCase())) : [];
+  const card = s => { const e = entryFor(s.tvmaze_id); return `<div class="pcard position-relative">
+      ${e ? `<a class="result-add saved" href="#/show/${s.tvmaze_id}?tab=tracking" title="In your collection"><i class="bi bi-check-lg"></i></a>`
+          : `<button class="result-add" data-act="add" data-id="${s.tvmaze_id}" data-stay="1" title="Add to collection" aria-label="Add ${esc(s.name)} to collection"><i class="bi bi-plus-lg"></i></button>`}
+      <a href="#/show/${s.tvmaze_id}"><div class="art">${posterImg(s)}<div class="hover-cta"><span>MORE INFO</span></div></div>
+      ${caption(s, e)}</a></div>`; };
+  return `<div class="page-top px-edge">
+    <h1 class="page-title mb-3">Discover</h1>
+    <form class="big-search mb-2" data-act="discover" role="search"><i class="bi bi-search"></i>
+      <input class="form-control" name="q" type="search" placeholder="Search TVmaze for a TV show" value="${esc(q)}" aria-label="Search TVmaze" autocomplete="off"></form>
+    <p class="note-line mb-4">Prototype: searches 20 sample shows already fetched from TVmaze. The real page calls TVmaze's /search/shows (up to 10 results).</p>
+    ${!q ? `<div class="muted">Try <a class="text-decoration-underline" href="#/discover?q=the">the</a>, <a class="text-decoration-underline" href="#/discover?q=drama">drama</a>, <a class="text-decoration-underline" href="#/discover?q=andor">andor</a>, or <a class="text-decoration-underline" href="#/discover?q=xqzzv">xqzzv</a> (no results).</div>`
+      : results.length ? `<div class="muted mb-3">${results.length} result${results.length>1?"s":""} for “${esc(q)}”</div><div class="poster-grid">${results.slice(0,10).map(card).join("")}</div>`
+      : `<div class="empty-state"><i class="bi bi-emoji-neutral"></i><h2 class="h5 mt-3">No shows found for “${esc(q)}”</h2><p class="muted">Check the spelling or try a shorter title.</p></div>`}
+  </div>` + footer;
+}
+
+function viewRemove(id) {
+  const s = showById(id), e = entryFor(id);
+  if (!e) { location.hash = `#/show/${id}`; return ""; }
+  return `<div class="confirm-wrap">${bg(s) ? `<div class="hero-bg" style="background-image:url('${esc(bg(s))}');filter:blur(18px) brightness(.35);transform:scale(1.08)"></div>` : ""}
+    <div class="confirm-card"><div class="label-caps">Remove from collection</div>
+      <h1 class="h3 fw-bold mb-3">Remove ${esc(s.name)}?</h1>
+      <p class="muted">This deletes your status (${stLabel(e.status)}), progress (${progressLong(e)}), rating and notes for this show. The show itself stays on HTTP.tv for other users.</p>
+      <div class="d-flex flex-wrap gap-3 mt-4"><button class="btn-pill btn-danger-pill" data-act="remove" data-id="${id}"><i class="bi bi-trash3"></i>Remove</button>
+      <a class="btn-pill btn-ghost" href="#/show/${id}?tab=tracking">Cancel</a></div></div></div>`;
+}
+
+/* ======================= RENDER + EVENTS ======================= */
+function djangoUrl(r) {
+  const [p0, p1, p2] = r.parts, e = p1 && entryFor(p1);
+  if (!p0) return "/";
+  if (p0 === "discover") return "/discover/" + (r.params.get("q") ? "?q=" + encodeURIComponent(r.params.get("q")) : "");
+  if (p0 === "collection") { const t = r.params.toString(); return "/collection/" + (t ? "?" + t : ""); }
+  if (p0 === "show" && p2 === "remove") return `/collection/${e ? e.id : "?"}/delete/`;
+  if (p0 === "show") return `/shows/${p1}/` + (e ? `   (tracking form posts to /collection/${e.id}/)` : "");
+  return "?";
+}
+let lastPath = "";
+function render(keepScroll = false) {
+  const r = parseRoute();
+  document.getElementById("nav").innerHTML = renderNav(navActive(r));
+  const [p0, p1, p2] = r.parts;
+  const html = !p0 ? viewHome() : p0 === "discover" ? viewDiscover(r.params) : p0 === "collection" ? viewCollection(r.params)
+    : p0 === "show" && p2 === "remove" ? viewRemove(p1) : p0 === "show" ? viewShow(p1, r.params) : viewHome();
+  document.getElementById("app").innerHTML = html;
+  document.getElementById("p-url").textContent = djangoUrl(r);
+  document.getElementById("p-msg").textContent = state.msg || "Real TVmaze show data; tracking data is invented. Nothing is saved.";
+  document.getElementById("p-empty").textContent = `Empty collection: ${state.empty ? "on" : "off"}`;
+  document.getElementById("p-nobg").textContent = `Missing backdrop: ${state.noBg ? "on" : "off"}`;
+  const path = r.parts.join("/");
+  if (!keepScroll && path !== lastPath) window.scrollTo(0, 0);
+  lastPath = path; state.msg = "";
+}
+function toast(text) { const t = document.getElementById("toast"); t.textContent = text; t.classList.add("show"); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("show"), 2600); }
+
+document.addEventListener("click", ev => {
+  const el = ev.target.closest("[data-act]"); if (!el) return;
+  const act = el.dataset.act;
+  if (act === "add") {
+    ev.preventDefault(); const id = +el.dataset.id, s = showById(id);
+    if (state.empty) { state.empty = false; state.entries = []; }
+    if (!entryFor(id)) state.entries.push({id: state.nextId++, tvmaze_id: id, status: "plan_to_watch", season: null, episode: null, rating: null, notes: "", created: TODAY, updated: TODAY});
+    toast(`Saved ${s.name} to your collection`);
+    state.msg = `Real app: POST tvmaze_id=${id} → Django re-fetches /shows/${id} from TVmaze → redirect to the entry.`;
+    if (el.dataset.stay) render(true); else if (location.hash === `#/show/${id}?tab=tracking`) render(true); else location.hash = `#/show/${id}?tab=tracking`;
+  } else if (act === "remove") {
+    const id = +el.dataset.id, s = showById(id);
+    state.entries = state.entries.filter(e => e.tvmaze_id !== id);
+    toast(`Removed ${s.name} from your collection`); state.msg = "Only the CollectionEntry was deleted; the shared Show row stays."; location.hash = "#/collection";
+  } else if (act === "star") {
+    const form = el.closest("form"), v = +el.dataset.v; form.rating.value = v || "";
+    form.querySelectorAll(".star-input button").forEach(b => { b.classList.toggle("on", v >= +b.dataset.v); b.setAttribute("aria-checked", v === +b.dataset.v); });
+    form.querySelector("#rating-text").innerHTML = v ? `${v} <small>of 5</small>` : "<small>Not rated</small>";
+  } else if (act === "scroll") {
+    const railEl = el.parentElement.querySelector(".rail"); railEl.scrollBy({left: +el.dataset.dir * railEl.clientWidth * 0.85, behavior: "smooth"});
+  } else if (act === "totracking") {
+    if (location.hash.includes("tab=tracking")) { ev.preventDefault(); document.querySelector(".tabbar").scrollIntoView({behavior: "smooth"}); }
+    else setTimeout(() => document.querySelector(".tabbar")?.scrollIntoView({behavior: "smooth"}), 30);
+  }
+});
+document.addEventListener("submit", ev => {
+  const f = ev.target, act = f.dataset.act; if (!act) return; ev.preventDefault();
+  if (act === "colsearch") { const p = new URLSearchParams(new FormData(f)); [...p.keys()].forEach(k => { if (!p.get(k) || (k === "sort" && p.get(k) === "-updated")) p.delete(k); }); location.hash = "#/collection" + (p.toString() ? "?" + p : ""); }
+  if (act === "discover") { const q = f.q.value.trim(); location.hash = "#/discover" + (q ? "?q=" + encodeURIComponent(q) : ""); }
+  if (act === "save") {
+    const e = state.entries.find(x => x.id === +f.dataset.entry), s = showById(e.tvmaze_id);
+    const draft = {status: f.status.value, season: f.season.value.trim(), episode: f.episode.value.trim(), rating: f.rating.value ? +f.rating.value : null, notes: f.notes.value};
+    const errors = validateTracking(draft);
+    if (Object.keys(errors).length) { f.outerHTML = trackingPanel(s, e, errors, draft); state.msg = "Validation failed; nothing saved (same rules as the planned Django form)."; document.getElementById("p-msg").textContent = state.msg; return; }
+    Object.assign(e, {status: draft.status, season: draft.season ? +draft.season : null, episode: draft.episode ? +draft.episode : null, rating: draft.rating, notes: draft.notes, updated: TODAY});
+    toast(`Saved tracking for ${s.name}`); state.msg = `Real app: POST /collection/${e.id}/ → redirect back here with a success message.`; render(true);
+  }
+});
+document.addEventListener("change", ev => { if (ev.target.dataset.act === "autosubmit") ev.target.form.requestSubmit(); });
+document.addEventListener("input", ev => { if (ev.target.id === "f-notes") { const c = document.getElementById("notes-count"); c.textContent = `${ev.target.value.length} / ${NOTES_MAX}`; c.style.color = ev.target.value.length > NOTES_MAX ? "#FCA5A5" : ""; } });
+document.getElementById("p-empty").onclick = () => { state.empty = !state.empty; state.msg = state.empty ? "Showing a brand-new user with no saved shows." : "Sample collection restored."; render(true); };
+document.getElementById("p-nobg").onclick = () => { state.noBg = !state.noBg; state.msg = state.noBg ? "Simulating a show with no wide TVmaze background: poster-based fallback." : "Real TVmaze backgrounds restored."; render(true); };
+document.getElementById("p-min").onclick = () => { const p = document.getElementById("proto"); p.classList.toggle("min"); document.getElementById("p-min").textContent = p.classList.contains("min") ? "+" : "–"; };
+window.addEventListener("hashchange", () => render());
+render();
+</script>
+</body>
+</html>

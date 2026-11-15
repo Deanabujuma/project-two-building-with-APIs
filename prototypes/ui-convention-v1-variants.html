@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HTTP.tv UI Variants v1</title>
+<!-- THROWAWAY PROTOTYPE (v1, superseded by ui-convention.html Direction D; kept for the design history). Not production code. Bootstrap 5 via CDN, matching the planned stack. -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+  body { padding-bottom: 120px; }
+  .poster { aspect-ratio: 210/295; object-fit: cover; width: 100%; background: #ddd; }
+  .poster-fallback { aspect-ratio: 210/295; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:2rem; color:#fff; background:#6c757d; }
+  .stars { color: #f5a623; letter-spacing: 1px; white-space: nowrap; }
+  .stars .off { color: #ced4da; }
+  .muted-small { font-size: .85rem; color: var(--bs-secondary-color); }
+  .clickable { cursor: pointer; }
+
+  /* Variant A: Poster grid (light, indigo accent) */
+  .vA { --accent: #4f46e5; }
+  .vA .navbar { background: var(--accent); }
+  .vA .nav-pills .nav-link.active { background: var(--accent); }
+  .vA .nav-pills .nav-link { color: var(--accent); }
+  .vA .nav-pills .nav-link.active { color: #fff; }
+  .vA .card { transition: box-shadow .15s; }
+  .vA .card:hover { box-shadow: 0 .5rem 1rem rgba(0,0,0,.12); }
+  .vA .page-link { color: var(--accent); }
+  .vA .active > .page-link { background: var(--accent); border-color: var(--accent); color:#fff; }
+
+  /* Variant B: Dense table (dark mode, sidebar nav) */
+  .vB { min-height: 100vh; }
+  .vB .sidebar { width: 220px; min-height: 100vh; background: #0b0f17; border-right: 1px solid #1f2937; }
+  .vB .sidebar a { color: #9ca3af; text-decoration: none; display:block; padding:.45rem .9rem; border-radius:.4rem; }
+  .vB .sidebar a.active, .vB .sidebar a:hover { background:#1f2937; color:#fff; }
+  .vB .table th.sortable { cursor:pointer; user-select:none; }
+  .vB .thumb { width: 34px; height: 48px; object-fit: cover; border-radius: 3px; }
+  .vB .status-tab { cursor:pointer; }
+  @media (max-width: 767px) { .vB .sidebar { display:none; } }
+
+  /* Variant C: Library list + detail (warm neutral, teal accent) */
+  .vC { --accent: #0f766e; background: #faf7f2; min-height: 100vh; }
+  .vC .brand { font-family: Georgia, serif; font-weight: 700; color: var(--accent); }
+  .vC .list-group-item.active { background: var(--accent); border-color: var(--accent); }
+  .vC .entry-row.selected { background: #e6f2f0; border-left: 4px solid var(--accent); }
+  .vC .entry-row { border-left: 4px solid transparent; }
+  .vC .thumb { width: 46px; height: 64px; object-fit: cover; border-radius: 4px; }
+  .vC .detail { position: sticky; top: 1rem; }
+  .vC .btn-accent { background: var(--accent); color:#fff; }
+  .vC .btn-accent:hover { background:#115e59; color:#fff; }
+
+  /* Prototype switcher (intentionally NOT part of any design) */
+  #proto-bar { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 2000;
+    background: #111; color: #eee; border: 2px dashed #f0c400; border-radius: 12px; padding: 8px 12px;
+    font: 13px/1.4 ui-monospace, Consolas, monospace; width: min(680px, calc(100vw - 32px)); box-shadow: 0 6px 24px rgba(0,0,0,.4); }
+  #proto-bar button { background:#333; color:#fff; border:1px solid #555; border-radius:6px; padding:2px 10px; font: inherit; }
+  #proto-bar button:hover { background:#555; }
+  #proto-bar .tag { color:#f0c400; font-weight:700; }
+  #proto-bar .state { color:#8fd18f; word-break: break-all; }
+  #proto-bar .msg { color:#9ecbff; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="proto-bar" role="region" aria-label="Prototype controls">
+  <div class="d-flex align-items-center gap-2 flex-wrap">
+    <span class="tag">PROTOTYPE</span>
+    <button id="prev" aria-label="Previous variant">&larr;</button>
+    <strong id="variant-name"></strong>
+    <button id="next" aria-label="Next variant">&rarr;</button>
+    <span style="opacity:.6">(&larr;/&rarr; keys)</span>
+    <button id="toggle-empty" style="margin-left:auto">Empty collection: off</button>
+    <a href="ui-convention.html" style="color:#f0c400">Current direction (D) &rarr;</a>
+  </div>
+  <div>URL: <span class="state" id="state-url"></span></div>
+  <div class="msg" id="state-msg">Click around. Nothing is saved; all data is in memory.</div>
+</div>
+
+<script>
+/* ---------- Mock data (real TVmaze show facts fetched 2026-11-15; tracking data invented) ---------- */
+const SHOWS = [
+ {id:1, tvmaze_id:169, name:"Breaking Bad", premiered:"2008-01-20", ended:"2019-10-11", show_status:"Ended", genres:"Drama, Crime, Thriller", network:"AMC", image_url:"https://static.tvmaze.com/uploads/images/medium_portrait/501/1253519.jpg", tvmaze_url:"https://www.tvmaze.com/shows/169/breaking-bad"},
+ {id:2, tvmaze_id:526, name:"The Office", premiered:"2005-03-24", ended:"2013-05-16", show_status:"Ended", genres:"Comedy", network:"NBC", image_url:"https://static.tvmaze.com/uploads/images/medium_portrait/481/1204342.jpg", tvmaze_url:"https://www.tvmaze.com/shows/526/the-office"},
+ {id:3, tvmaze_id:44933, name:"Severance", premiered:"2022-02-18", ended:null, show_status:"Running", genres:"Drama, Science-Fiction, Mystery", network:"Apple TV", image_url:"https://static.tvmaze.com/uploads/images/medium_portrait/548/1371406.jpg", tvmaze_url:"https://www.tvmaze.com/shows/44933/severance"},
+ {id:4, tvmaze_id:2993, name:"Stranger Things", premiered:"2016-07-15", ended:"2025-12-31", show_status:"Ended", genres:"Drama, Horror, Science-Fiction", network:"Netflix", image_url:"https://static.tvmaze.com/uploads/images/medium_portrait/595/1489169.jpg", tvmaze_url:"https://www.tvmaze.com/shows/2993/stranger-things"},
+ {id:5, tvmaze_id:54198, name:"The Bear", premiered:"2022-06-23", ended:"2026-06-25", show_status:"Ended", genres:"Drama, Comedy, Food", network:"Hulu", image_url:"https://static.tvmaze.com/uploads/images/medium_portrait/629/1574642.jpg", tvmaze_url:"https://www.tvmaze.com/shows/54198/the-bear"},
+ {id:6, tvmaze_id:55350, name:"Abbott Elementary", premiered:"2021-12-07", ended:null, show_status:"Running", genres:"Comedy", network:"ABC", image_url:"https://static.tvmaze.com/uploads/images/medium_portrait/644/1611887.jpg", tvmaze_url:"https://www.tvmaze.com/shows/55350/abbott-elementary"},
+ {id:7, tvmaze_id:618, name:"Better Call Saul", premiered:"2015-02-08", ended:"2022-08-15", show_status:"Ended", genres:"Drama, Crime, Legal", network:"AMC", image_url:"https://static.tvmaze.com/uploads/images/medium_portrait/501/1253515.jpg", tvmaze_url:"https://www.tvmaze.com/shows/618/better-call-saul"},
+ {id:8, tvmaze_id:23470, name:"Succession", premiered:"2018-06-03", ended:"2023-05-28", show_status:"Ended", genres:"Drama, Family", network:"HBO", image_url:"https://static.tvmaze.com/uploads/images/medium_portrait/453/1134275.jpg", tvmaze_url:"https://www.tvmaze.com/shows/23470/succession"},
+ {id:9, tvmaze_id:44458, name:"Ted Lasso", premiered:"2020-08-14", ended:null, show_status:"To Be Determined", genres:"Drama, Comedy, Sports", network:"Apple TV", image_url:"https://static.tvmaze.com/uploads/images/medium_portrait/634/1585930.jpg", tvmaze_url:"https://www.tvmaze.com/shows/44458/ted-lasso"},
+ {id:10, tvmaze_id:46562, name:"The Last of Us", premiered:"2023-01-15", ended:null, show_status:"Running", genres:"Drama, Action, Horror", network:"HBO", image_url:"https://static.tvmaze.com/uploads/images/medium_portrait/563/1409008.jpg", tvmaze_url:"https://www.tvmaze.com/shows/46562/the-last-of-us"},
+ {id:11, tvmaze_id:55138, name:"Arcane: League of Legends", premiered:"2021-11-06", ended:"2024-11-23", show_status:"Ended", genres:"Action, Adventure, Fantasy", network:"Netflix", image_url:"https://static.tvmaze.com/uploads/images/medium_portrait/536/1340287.jpg", tvmaze_url:"https://www.tvmaze.com/shows/55138/arcane-league-of-legends"},
+ {id:12, tvmaze_id:16149, name:"Fleabag", premiered:"2016-07-21", ended:"2019-04-08", show_status:"Ended", genres:"Drama, Comedy", network:"BBC Three", image_url:"https://static.tvmaze.com/uploads/images/medium_portrait/192/482341.jpg", tvmaze_url:"https://www.tvmaze.com/shows/16149/fleabag"},
+ {id:13, tvmaze_id:17861, name:"Dark", premiered:"2017-12-01", ended:"2020-06-27", show_status:"Ended", genres:"Drama, Science-Fiction, Supernatural", network:"Netflix", image_url:"https://static.tvmaze.com/uploads/images/medium_portrait/504/1262352.jpg", tvmaze_url:"https://www.tvmaze.com/shows/17861/dark"},
+ {id:14, tvmaze_id:37336, name:"Shōgun", premiered:"2024-02-27", ended:null, show_status:"Running", genres:"Drama, Adventure, History", network:"Hulu", image_url:"https://static.tvmaze.com/uploads/images/medium_portrait/506/1265637.jpg", tvmaze_url:"https://www.tvmaze.com/shows/37336/shogun"},
+];
+// CollectionEntry: status, current_season, current_episode, rating (1-5|null), notes, updated_at
+const ENTRIES = [
+ {id:101, show:1,  status:"completed",     season:5, episode:16, rating:5,    notes:"Rewatch someday. Ozymandias is the best hour of TV I've seen.", updated:"2026-11-02"},
+ {id:102, show:2,  status:"watching",      season:4, episode:9,  rating:4,    notes:"Comfort show. Skipping some of season 8 later?", updated:"2026-11-14"},
+ {id:103, show:3,  status:"watching",      season:2, episode:4,  rating:5,    notes:"Theory: the goats matter. Write down the Kier quotes.", updated:"2026-11-13"},
+ {id:104, show:4,  status:"on_hold",       season:3, episode:2,  rating:3,    notes:"Paused until friends catch up.", updated:"2026-09-20"},
+ {id:105, show:5,  status:"plan_to_watch", season:null, episode:null, rating:null, notes:"", updated:"2026-11-10"},
+ {id:106, show:6,  status:"watching",      season:1, episode:7,  rating:4,    notes:"", updated:"2026-11-11"},
+ {id:107, show:7,  status:"plan_to_watch", season:null, episode:null, rating:null, notes:"Start after finishing Breaking Bad recap.", updated:"2026-10-28"},
+ {id:108, show:8,  status:"completed",     season:4, episode:10, rating:5,    notes:"", updated:"2026-08-15"},
+ {id:109, show:9,  status:"dropped",       season:2, episode:3,  rating:2,    notes:"Lost interest in season 2.", updated:"2026-07-01"},
+ {id:110, show:10, status:"watching",      season:2, episode:1,  rating:4,    notes:"", updated:"2026-11-09"},
+ {id:111, show:11, status:"completed",     season:2, episode:9,  rating:5,    notes:"Animation is unreal.", updated:"2026-06-30"},
+ {id:112, show:12, status:"plan_to_watch", season:null, episode:null, rating:null, notes:"", updated:"2026-11-12"},
+ {id:113, show:13, status:"on_hold",       season:1, episode:6,  rating:4,    notes:"Need a family tree diagram before continuing.", updated:"2026-10-05"},
+ {id:114, show:14, status:"plan_to_watch", season:null, episode:null, rating:null, notes:"", updated:"2026-11-15"},
+];
+const STATUSES = [["", "All"], ["watching","Watching"], ["plan_to_watch","Plan to Watch"], ["on_hold","On Hold"], ["completed","Completed"], ["dropped","Dropped"]];
+const STATUS_BADGE = {watching:"primary", plan_to_watch:"secondary", on_hold:"warning", completed:"success", dropped:"danger"};
+const SORTS = [["-updated","Recently updated"], ["title","Title (A–Z)"], ["-rating","Rating (high–low)"]];
+const PAGE_SIZE = 12;
+
+/* ---------- Pure query logic (mirrors the planned ?status=&q=&sort=&page= params) ---------- */
+function runQuery(entries, {status, q, sort, page}) {
+  let rows = entries.map(e => ({...e, show: SHOWS.find(s => s.id === e.show)}));
+  const counts = {"": rows.length};
+  for (const [k] of STATUSES.slice(1)) counts[k] = rows.filter(r => r.status === k).length;
+  if (status) rows = rows.filter(r => r.status === status);
+  if (q) rows = rows.filter(r => r.show.name.toLowerCase().includes(q.toLowerCase()));
+  const cmp = {
+    "-updated": (a,b) => b.updated.localeCompare(a.updated),
+    "title":    (a,b) => a.show.name.localeCompare(b.show.name),
+    "-rating":  (a,b) => (b.rating ?? 0) - (a.rating ?? 0) || a.show.name.localeCompare(b.show.name),
+  }[sort];
+  rows.sort(cmp);
+  const total = rows.length, pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const p = Math.min(Math.max(1, page), pages);
+  return {items: rows.slice((p-1)*PAGE_SIZE, p*PAGE_SIZE), total, pages, page: p, counts, start: total ? (p-1)*PAGE_SIZE+1 : 0};
+}
+
+/* ---------- App state ---------- */
+const state = {status:"", q:"", sort:"-updated", page:1, selected:103, empty:false, msg:""};
+const VARIANTS = [
+  {key:"A", name:"Poster grid", render: renderA},
+  {key:"B", name:"Dense table (dark)", render: renderB},
+  {key:"C", name:"Library list + detail", render: renderC},
+];
+let vIndex = 0;
+try { const saved = localStorage.getItem("httptv-proto-variant"); if (saved !== null) vIndex = Math.min(+saved || 0, VARIANTS.length-1); } catch (e) {}
+{ const h = VARIANTS.findIndex(v => "#" + v.key === location.hash.toUpperCase()); if (h >= 0) vIndex = h; } // e.g. ui-convention.html#B
+
+/* ---------- Formatting helpers ---------- */
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const label = st => STATUSES.find(([k]) => k === st)[1];
+function years(s) {
+  const a = s.premiered ? s.premiered.slice(0,4) : "N/A";
+  if (!s.ended) return s.show_status === "Running" ? `${a}–present` : `${a}–`;
+  const b = s.ended.slice(0,4); return a === b ? a : `${a}–${b}`;
+}
+const progress = e => e.season ? `S${e.season} · E${e.episode}` : "Not started";
+function stars(r) {
+  if (!r) return `<span class="muted-small">Not rated</span>`;
+  return `<span class="stars" aria-label="${r} out of 5">${"★".repeat(r)}<span class="off">${"★".repeat(5-r)}</span></span>`;
+}
+const badge = st => `<span class="badge text-bg-${STATUS_BADGE[st]}">${label(st)}</span>`;
+function poster(s, cls) {
+  return `<img class="${cls}" src="${esc(s.image_url)}" alt="${esc(s.name)} poster" loading="lazy"
+    onerror="this.outerHTML='<div class=&quot;poster-fallback ${cls}&quot;>${esc(s.name[0])}</div>'">`;
+}
+function urlString() {
+  const p = new URLSearchParams();
+  if (state.status) p.set("status", state.status);
+  if (state.q) p.set("q", state.q);
+  if (state.sort !== "-updated") p.set("sort", state.sort);
+  if (state.page > 1) p.set("page", state.page);
+  const s = p.toString(); return "/collection/" + (s ? "?" + s : "");
+}
+function emptyState(result) {
+  if (state.empty) return `<div class="text-center py-5"><h4>Your collection is empty</h4>
+    <p class="text-body-secondary">Search TVmaze to find shows and save them here.</p>
+    <a class="btn btn-primary" href="#" data-act="stub" data-msg="Would go to /search/">Search TVmaze</a></div>`;
+  return `<div class="text-center py-5"><h5>No shows match</h5>
+    <p class="text-body-secondary">${state.q ? `Nothing titled “${esc(state.q)}”` : "Nothing"} in ${state.status ? label(state.status) : "your collection"}.</p>
+    <a href="#" data-act="clear">Clear filters</a></div>`;
+}
+function pagination(r, extraCls="") {
+  if (r.pages < 2) return "";
+  let h = `<nav aria-label="Collection pages"><ul class="pagination ${extraCls} justify-content-center mt-4">`;
+  h += `<li class="page-item ${r.page===1?"disabled":""}"><a class="page-link" href="#" data-act="page" data-v="${r.page-1}">Previous</a></li>`;
+  for (let i=1;i<=r.pages;i++) h += `<li class="page-item ${i===r.page?"active":""}"><a class="page-link" href="#" data-act="page" data-v="${i}">${i}</a></li>`;
+  h += `<li class="page-item ${r.page===r.pages?"disabled":""}"><a class="page-link" href="#" data-act="page" data-v="${r.page+1}">Next</a></li></ul></nav>`;
+  return h;
+}
+const searchForm = (extra="") => `<form class="d-flex gap-2 ${extra}" data-act="search" role="search">
+  <input class="form-control" name="q" type="search" placeholder="Search my shows by title" value="${esc(state.q)}" aria-label="Search my shows">
+  <button class="btn btn-outline-secondary" type="submit">Search</button></form>`;
+const sortSelect = (extra="") => `<select class="form-select ${extra}" data-act="sort" aria-label="Sort by">
+  ${SORTS.map(([k,l]) => `<option value="${k}" ${k===state.sort?"selected":""}>${l}</option>`).join("")}</select>`;
+const footer = `<footer class="text-center muted-small py-4">Show data from <a href="https://www.tvmaze.com" target="_blank" rel="noopener">TVmaze</a>, licensed CC BY-SA 4.0.</footer>`;
+
+/* ---------- Variant A: top navbar + pills + poster card grid ---------- */
+function renderA(r) {
+  document.documentElement.setAttribute("data-bs-theme", "light");
+  const tabs = STATUSES.map(([k,l]) => `<li class="nav-item"><a class="nav-link text-nowrap ${state.status===k?"active":""}" href="#" data-act="status" data-v="${k}">${l} <span class="opacity-75">${r.counts[k]}</span></a></li>`).join("");
+  const cards = r.items.map(e => `<div class="col-6 col-md-4 col-lg-3">
+    <div class="card h-100 clickable" data-act="open" data-v="${e.id}">
+      ${poster(e.show, "poster card-img-top")}
+      <div class="card-body p-2">
+        <div class="d-flex justify-content-between align-items-start gap-1"><h6 class="card-title mb-1">${esc(e.show.name)}</h6></div>
+        <div class="muted-small mb-2">${years(e.show)} · ${esc(e.show.network)}</div>
+        <div class="mb-1">${badge(e.status)}</div>
+        <div class="d-flex justify-content-between align-items-center"><small>${progress(e)}</small>${stars(e.rating)}</div>
+      </div></div></div>`).join("");
+  return `<div class="vA">
+  <nav class="navbar navbar-dark navbar-expand"><div class="container flex-wrap gap-2">
+    <a class="navbar-brand fw-bold" href="#">HTTP.tv</a>
+    <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="#" data-act="stub" data-msg="Would go to /search/">Search TVmaze</a></li>
+      <li class="nav-item"><a class="nav-link active" href="#">My Collection</a></li></ul>
+    <span class="navbar-text me-3 d-none d-sm-inline">demo_user</span><a class="btn btn-sm btn-light" href="#" data-act="stub" data-msg="Would POST /accounts/logout/">Log out</a>
+  </div></nav>
+  <main class="container py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+      <div><h1 class="h3 mb-0">My Collection</h1><div class="muted-small">${state.empty ? 0 : r.counts[""]} shows saved</div></div>
+      <div class="d-flex gap-2 flex-wrap">${searchForm()}${sortSelect("w-auto")}</div>
+    </div>
+    <ul class="nav nav-pills mb-4 flex-nowrap overflow-auto">${tabs}</ul>
+    ${r.total ? `<div class="row g-3">${cards}</div>${pagination(r)}` : emptyState(r)}
+  </main>${footer}</div>`;
+}
+
+/* ---------- Variant B: dark sidebar app shell + dense sortable table ---------- */
+function renderB(r) {
+  document.documentElement.setAttribute("data-bs-theme", "dark");
+  const tabs = STATUSES.map(([k,l]) => `<span class="status-tab badge rounded-pill ${state.status===k?"text-bg-light":"text-bg-dark border border-secondary"}" data-act="status" data-v="${k}">${l} · ${r.counts[k]}</span>`).join(" ");
+  const sortHead = (key, text, cls="") => {
+    const on = state.sort === key; return `<th class="sortable ${cls}" data-act="sorthead" data-v="${key}">${text}${on ? " ▾" : ""}</th>`;
+  };
+  const rows = r.items.map(e => `<tr class="clickable" data-act="open" data-v="${e.id}">
+      <td>${poster(e.show, "thumb")}</td>
+      <td><div class="fw-semibold">${esc(e.show.name)}</div><div class="muted-small d-md-none">${badge(e.status)}</div></td>
+      <td class="d-none d-md-table-cell">${badge(e.status)}</td>
+      <td>${progress(e)}</td>
+      <td>${stars(e.rating)}</td>
+      <td class="d-none d-lg-table-cell muted-small">${esc(e.show.genres)}</td>
+      <td class="d-none d-lg-table-cell muted-small">${years(e.show)}</td>
+      <td class="d-none d-md-table-cell muted-small">${e.updated}</td>
+    </tr>`).join("");
+  return `<div class="vB d-flex">
+    <aside class="sidebar p-3 flex-shrink-0">
+      <div class="fs-5 fw-bold text-white mb-4">▣ HTTP.tv</div>
+      <a href="#" data-act="stub" data-msg="Would go to /search/">⌕ Search TVmaze</a>
+      <a href="#" class="active">☰ My Collection</a>
+      <a href="#" data-act="stub" data-msg="Would go to /api/ (browsable API)">{ } API</a>
+      <hr class="border-secondary">
+      <div class="muted-small mb-1 px-2">Signed in as demo_user</div>
+      <a href="#" data-act="stub" data-msg="Would POST /accounts/logout/">⇥ Log out</a>
+    </aside>
+    <main class="flex-grow-1 p-3 p-md-4" style="min-width:0">
+      <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+        <h1 class="h4 mb-0 me-auto">My Collection</h1>${searchForm("")}
+      </div>
+      <div class="mb-3 d-flex flex-wrap gap-1">${tabs}</div>
+      ${r.total ? `<div class="table-responsive"><table class="table table-hover table-sm align-middle">
+        <thead><tr><th></th>${sortHead("title","Title")}<th class="d-none d-md-table-cell">Status</th><th>Progress</th>${sortHead("-rating","Rating")}
+        <th class="d-none d-lg-table-cell">Genres</th><th class="d-none d-lg-table-cell">Years</th>${sortHead("-updated","Updated","d-none d-md-table-cell")}</tr></thead>
+        <tbody>${rows}</tbody></table></div>
+        <div class="d-flex justify-content-between align-items-center muted-small">
+          <span>Showing ${r.start}–${r.start + r.items.length - 1} of ${r.total}</span>
+          <span><button class="btn btn-sm btn-outline-secondary" data-act="page" data-v="${r.page-1}" ${r.page===1?"disabled":""}>‹ Prev</button>
+          Page ${r.page} / ${r.pages}
+          <button class="btn btn-sm btn-outline-secondary" data-act="page" data-v="${r.page+1}" ${r.page===r.pages?"disabled":""}>Next ›</button></span>
+        </div>` : emptyState(r)}
+      ${footer}
+    </main></div>`;
+}
+
+/* ---------- Variant C: filter sidebar + compact list + detail preview panel ---------- */
+function renderC(r) {
+  document.documentElement.setAttribute("data-bs-theme", "light");
+  const filters = STATUSES.map(([k,l]) => `<a href="#" class="list-group-item list-group-item-action d-flex justify-content-between ${state.status===k?"active":""}" data-act="status" data-v="${k}">${l}<span class="badge ${state.status===k?"text-bg-light":"text-bg-secondary"} rounded-pill">${r.counts[k]}</span></a>`).join("");
+  const sel = r.items.find(e => e.id === state.selected) || r.items[0];
+  const list = r.items.map(e => `<div class="entry-row d-flex gap-3 align-items-center p-2 border-bottom clickable ${sel && e.id===sel.id?"selected":""}" data-act="select" data-v="${e.id}">
+      ${poster(e.show, "thumb")}
+      <div class="flex-grow-1" style="min-width:0"><div class="fw-semibold text-truncate">${esc(e.show.name)}</div>
+        <div class="muted-small">${label(e.status)} · ${progress(e)}</div></div>
+      <div class="d-none d-sm-block">${stars(e.rating)}</div></div>`).join("");
+  const detail = sel ? `<div class="card detail shadow-sm"><div class="row g-0">
+      <div class="col-4">${poster(sel.show, "poster rounded-start")}</div>
+      <div class="col-8"><div class="card-body">
+        <h2 class="h5 mb-1">${esc(sel.show.name)}</h2>
+        <div class="muted-small mb-2">${years(sel.show)} · ${esc(sel.show.network)} · ${esc(sel.show.show_status)}</div>
+        <div class="muted-small mb-2">${esc(sel.show.genres)}</div>
+        ${badge(sel.status)}
+      </div></div></div>
+      <div class="card-body border-top">
+        <dl class="row mb-2 small"><dt class="col-5">Progress</dt><dd class="col-7">${progress(sel)}</dd>
+          <dt class="col-5">My rating</dt><dd class="col-7">${stars(sel.rating)}</dd>
+          <dt class="col-5">Updated</dt><dd class="col-7">${sel.updated}</dd></dl>
+        <div class="small fw-semibold">Notes</div>
+        <p class="small ${sel.notes ? "" : "text-body-secondary fst-italic"}">${sel.notes ? esc(sel.notes) : "No notes yet."}</p>
+        <div class="d-flex gap-2 flex-wrap">
+          <a href="#" class="btn btn-sm btn-accent" data-act="stub" data-msg="Would go to /collection/${sel.id}/ (combined detail + edit page)">Edit tracking</a>
+          <a href="${esc(sel.show.tvmaze_url)}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary">View on TVmaze</a>
+          <a href="#" class="btn btn-sm btn-outline-danger ms-auto" data-act="stub" data-msg="Would go to /collection/${sel.id}/delete/">Remove</a>
+        </div></div></div>` : "";
+  return `<div class="vC">
+    <header class="border-bottom bg-white"><div class="container-xl d-flex align-items-center gap-3 py-2">
+      <span class="brand fs-4">HTTP.tv</span>
+      <a href="#" class="text-decoration-none text-body" data-act="stub" data-msg="Would go to /search/">Search TVmaze</a>
+      <a href="#" class="text-decoration-none fw-semibold" style="color:var(--accent)">My Collection</a>
+      <span class="ms-auto muted-small d-none d-sm-inline">demo_user</span>
+      <a href="#" class="btn btn-sm btn-outline-secondary" data-act="stub" data-msg="Would POST /accounts/logout/">Log out</a>
+    </div></header>
+    <main class="container-xl py-4"><div class="row g-4">
+      <div class="col-12 col-md-3">
+        <h1 class="h5">My Collection</h1>
+        ${searchForm("mb-3 flex-column flex-xl-row")}
+        <div class="list-group mb-3">${filters}</div>
+        <label class="form-label small mb-1">Sort by</label>${sortSelect("form-select-sm")}
+      </div>
+      <div class="col-12 col-md-5 col-lg-5">
+        <div class="bg-white rounded border">${r.total ? list : emptyState(r)}</div>
+        ${pagination(r, "pagination-sm")}
+      </div>
+      <div class="col-12 col-md-4 col-lg-4">${detail}</div>
+    </div></main>${footer}</div>`;
+}
+
+/* ---------- Render + events ---------- */
+function render() {
+  const r = runQuery(state.empty ? [] : ENTRIES, state);
+  state.page = r.page;
+  const v = VARIANTS[vIndex];
+  document.getElementById("app").innerHTML = v.render(r);
+  document.getElementById("variant-name").textContent = `${v.key} · ${v.name}  (${vIndex+1}/${VARIANTS.length})`;
+  document.getElementById("state-url").textContent = urlString();
+  document.getElementById("state-msg").textContent = state.msg || "Click around. Nothing is saved; all data is in memory.";
+  document.getElementById("toggle-empty").textContent = `Empty collection: ${state.empty ? "on" : "off"}`;
+  try { localStorage.setItem("httptv-proto-variant", vIndex); } catch (e) {}
+}
+function switchVariant(d) { vIndex = (vIndex + d + VARIANTS.length) % VARIANTS.length; state.msg = ""; render(); window.scrollTo(0,0); }
+
+document.getElementById("app").addEventListener("click", ev => {
+  const el = ev.target.closest("[data-act]"); if (!el || el.tagName === "FORM" || el.tagName === "SELECT") return;
+  const act = el.dataset.act, v = el.dataset.v;
+  if (act === "stub") { ev.preventDefault(); state.msg = el.dataset.msg; }
+  else if (act === "status") { ev.preventDefault(); state.status = v; state.page = 1; state.msg = `Filtered to ${label(v)}.`; }
+  else if (act === "page") { ev.preventDefault(); state.page = +v; state.msg = `Went to page ${v}.`; }
+  else if (act === "clear") { ev.preventDefault(); state.status = ""; state.q = ""; state.page = 1; state.msg = "Filters cleared."; }
+  else if (act === "sorthead") { state.sort = v; state.page = 1; state.msg = `Sorted by ${SORTS.find(s=>s[0]===v)[1]}.`; }
+  else if (act === "open") { state.msg = `Would open /collection/${v}/ (combined detail + edit page).`; }
+  else if (act === "select") { state.selected = +v; state.msg = `Previewing entry ${v}. Real app: same panel, or /collection/${v}/ on phones.`; }
+  else return;
+  render();
+});
+document.getElementById("app").addEventListener("submit", ev => {
+  ev.preventDefault(); state.q = new FormData(ev.target).get("q").trim(); state.page = 1;
+  state.msg = state.q ? `Searched titles for “${state.q}”.` : "Search cleared."; render();
+});
+document.getElementById("app").addEventListener("change", ev => {
+  if (ev.target.dataset.act !== "sort") return;
+  state.sort = ev.target.value; state.page = 1; state.msg = `Sorted by ${SORTS.find(s=>s[0]===state.sort)[1]}.`; render();
+});
+document.getElementById("prev").onclick = () => switchVariant(-1);
+document.getElementById("next").onclick = () => switchVariant(1);
+document.getElementById("toggle-empty").onclick = () => { state.empty = !state.empty; state.page = 1; state.msg = state.empty ? "Showing the brand-new-user empty state." : "Restored sample collection."; render(); };
+document.addEventListener("keydown", ev => {
+  if (ev.target.closest("input, textarea, select")) return;
+  if (ev.key === "ArrowLeft") switchVariant(-1);
+  if (ev.key === "ArrowRight") switchVariant(1);
+});
+render();
+</script>
+</body>
+</html>
