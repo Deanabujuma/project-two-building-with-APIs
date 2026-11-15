@@ -84,6 +84,10 @@ Sections:
 - **Cause:** the web form's built-in length check ran before the shared rule and used its own formatting.
 - **Fix:** removed the form's duplicate length check; the shared rule produces the message in both places. The textarea's `maxlength` attribute still limits typing. Result: `1 failed, 396 passed` → `397 passed`.
 
+### B13 — The client rejected `--ordering -rating` (2026-11-15, Phase 12, found by a test)
+- **Before:** `test_list_sends_token_and_parameters_and_prints_table` failed with `argparse.ArgumentError: argument --ordering: expected one argument`. argparse treats a value that starts with `-` as a new option.
+- **Choice:** changing the test to `--ordering=-rating` would have hidden the problem, because descending sorts are exactly the ones people type with a minus. The client now joins `--ordering <value>` before parsing, so both forms work.
+
 ---
 
 ## 2. Requests and responses
@@ -150,6 +154,34 @@ The season-only PATCH shows the merged-values check: the request sent no episode
                                               show__premiered, show__tvmaze_rating, updated_at."]}
 ```
 Ties (several 4-star shows) are broken by show name, the same rule the web page uses.
+
+### R17 — The command-line client against the live server (2026-11-15, Phase 12)
+`C="uv run --env-file .env python scripts/httptv_client.py"` (token read from the Git-ignored `.env`):
+```
+$ $C list --status watching --ordering -rating
+   ID  Show                              Status         Progress                Rating
+    4  Breaking Bad                      watching       Season 2, Episode 4     5/5
+    2  Severance                         watching       Season 2, Episode 3     4/5
+   10  Ted Lasso                         watching       Season 1, Episode 6     4/5
+   14  Dark                              watching       Season 3, Episode 2     Not rated
+    6  Stranger Things                   watching       Season 4, Episode 8     Not rated
+
+Page 1 of 1 (5 entries)                                            [exit 0]
+$ $C next 2
+Severance: Season 2, Episode 3 -> Season 2, Episode 4             [exit 0]
+$ $C update 2 --season 3
+Updated entry 2: Severance | watching | Season 3, Episode 4 | 4/5   [exit 0]
+$ $C update 2 --rating 9
+Error: HTTP.tv refused the change:
+  rating: Rating must be a whole number from 1 to 5, or blank.     [exit 1]
+$ $C next 999
+Error: No entry with ID 999 in your collection.                   [exit 1]
+$ HTTPTV_API_TOKEN=wrong ... list
+Error: HTTP.tv rejected your token (HTTP 401). Check HTTPTV_API_TOKEN in .env.   [exit 1]
+$ HTTPTV_API_URL=http://127.0.0.1:8999/api/ $C list    (nothing listening there)
+Error: Could not connect to HTTP.tv at http://127.0.0.1:8999/api/. Is the server running?   [exit 1]
+```
+Afterwards, `update 2 --season 2 --episode 3` restored the sample entry.
 
 ---
 
@@ -313,3 +345,9 @@ Source: each package's official PyPI metadata (`https://pypi.org/pypi/<package>/
 - **AC43:** a parametrized test compares the web page and the API for 4 status values × 3 equivalent sorts (12 combinations); they return identical lists.
 - **Decision:** an unknown `ordering` returns 400 (DRF's default silently ignores it), matching the strict filters.
 - **AC44 (manual):** the browsable API's Filters form lists status, minimum rating, genre, show status, network, search and ordering.
+
+### V14 — Command-line client (2026-11-15, Phase 12)
+- `tests/test_httptv_client.py` (23 tests, all HTTP mocked) was written before `scripts/httptv_client.py`.
+- **TDD for `next`:** `list` and `update` were built first. With them in place, only the four `next` tests failed (`4 failed, 19 passed`). After adding `next`: `472 passed`.
+- **`next` rule:** episode + 1; season and status never change; "Not started" becomes Season 1, Episode 1. Moving to a new season is left to `update --season N --episode 1`, because the API doesn't know how many episodes a season has.
+- Real run R17 above; error messages go to stderr with exit code 1.

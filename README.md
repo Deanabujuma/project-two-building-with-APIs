@@ -257,3 +257,24 @@ return 400 with a message. Example:
 ```
 curl "http://127.0.0.1:8000/api/collection/?status=watching&min_rating=4&ordering=-rating"      -H "Authorization: Token $HTTPTV_API_TOKEN"
 ```
+
+### Command-line client (`scripts/httptv_client.py`)
+
+A small script that reads and updates **your** collection through the REST API. It needs the
+server running and `HTTPTV_API_TOKEN` in `.env` (see "Token" above). `HTTPTV_API_URL` is
+optional; the default is `http://127.0.0.1:8000/api/`.
+
+```
+uv run --env-file .env python scripts/httptv_client.py list --status watching --ordering -rating
+uv run --env-file .env python scripts/httptv_client.py list --search office --page 2 --page-size 5
+uv run --env-file .env python scripts/httptv_client.py update 2 --status on_hold --rating 4 --notes "Paused"
+uv run --env-file .env python scripts/httptv_client.py update 2 --season none --episode none   # clear progress
+uv run --env-file .env python scripts/httptv_client.py next 2      # Season 2, Episode 3 -> Season 2, Episode 4
+```
+
+- `list` prints a table plus `Page X of Y (N entries)`.
+- `update` sends only the options you give; `none` clears season, episode or rating.
+- `next` adds one to the episode. An entry with no progress starts at Season 1, Episode 1. It never changes the season or status.
+
+Errors (server not running, bad token, unknown entry ID, a rejected value) print one clear message
+to stderr and exit with code 1. Tests: `uv run pytest tests/test_httptv_client.py` (no server needed).
