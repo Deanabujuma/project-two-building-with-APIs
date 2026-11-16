@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Delete account · HTTP.tv{% endblock %}
+{% block content %}
+<div class="auth-wrap"><div class="auth-card form-dark danger-card" data-state="confirm-delete">
+  <div class="label-caps danger-title">Delete account</div>
+  <h1 class="h4 fw-bold mb-3">Are you sure you want to permanently delete your account? This action cannot be undone.</h1>
+  <p class="muted">Deleting <strong>{{ user.username }}</strong> permanently removes your collection{% if total_saved %} ({{ total_saved }} show{{ total_saved|pluralize }}){% endif %}, including every rating, note and progress entry, and your API token. Shows saved by other people are not affected.</p>
+
+  <form method="post" novalidate data-delete-form>
+    {% csrf_token %}
+    {% if form.non_field_errors %}<ul class="errorlist">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+    {% include "accounts/partials/field.html" with field=form.password %}
+    {% include "accounts/partials/field.html" with field=form.confirm %}
+    <div class="d-flex flex-wrap gap-3 mt-4">
+      <button class="btn-pill btn-danger-solid" type="submit" data-delete-button disabled>Permanently delete my account</button>
+      <a class="btn-pill btn-ghost" href="{% url 'accounts:profile' %}">Cancel</a>
+    </div>
+    <p class="dim small mt-3 mb-0">The button turns on once both fields are filled in. Your password is checked again on the server.</p>
+  </form>
+</div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+  // Enable the final button only when a password is entered and DELETE is typed exactly.
+  // (The browser can't tell whether the password is right; the server checks it.)
+  (function () {
+    var form = document.querySelector("[data-delete-form]");
+    var button = form.querySelector("[data-delete-button]");
+    var password = form.querySelector("input[name=password]");
+    var confirm = form.querySelector("input[name=confirm]");
+    function update() { button.disabled = !(password.value.length > 0 && confirm.value.trim() === "DELETE"); }
+    form.addEventListener("input", update);
+    update();
+  })();
+</script>
+{% endblock %}

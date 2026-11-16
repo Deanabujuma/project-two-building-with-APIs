@@ -465,3 +465,21 @@ describe the submitted project.
   - `/discover/genre/Comedy/` lists 54 shows airing this week;
   - no horizontal overflow at 1440 px or 390 px.
 - **Screenshots:** `evidence/post-discover-desktop.png`, `post-discover-desktop-full.png`, `post-discover-phone.png`, `post-discover-genre.png`, `post-discover-genre-phone.png`.
+
+### P2 — Profile & Settings and Delete Account (2026-11-15, Phase B)
+- **Database:** migration `accounts/0002_profile_preferences` adds `schedule_country` (default `US`) and `default_collection_sort` (default `-updated`). `sqlmigrate` shows SQLite's usual table rebuild, filling the defaults for existing users. demo_user's 19 entries were unchanged afterwards.
+- **Tests:** `accounts/tests/test_profile.py` has 32 tests. `uv run pytest -q` → `551 passed` (485 original + 34 Discover + 32 Profile).
+- **Test mistakes I made:** my fixture used a rating of 8 and a status of `planned`. HTTP.tv's database checks (ratings 1–5; status `plan_to_watch`) rejected them, which shows those checks work.
+- **Live browser check (desktop 1440 px and phone 390 px):**
+  - The profile page showed all panels with the Danger Zone last, and demo_user's real counts (19 saved: 5 Plan to Watch, 5 Watching, 2 On Hold, 5 Completed, 2 Dropped).
+  - The delete flow used a temporary `throwaway_user` with 2 entries, never demo_user:
+    - a wrong password returned `POST /accounts/delete/ 400` and showed "That password is incorrect.", and the account remained;
+    - the correct password returned `302`, the user was logged out, and the home page showed "Your account has been permanently deleted.";
+    - after the run: throwaway_user gone, entries 21 → 19, Show rows still 20, demo_user still 19 entries.
+  - A button-state probe on demo_user's page (never submitted) found the button disabled when empty, with only a password, and with lowercase `delete`; enabled with both fields filled; disabled again when the password was cleared.
+- **Found while checking and fixed:**
+  - The browser required exactly `DELETE` while the server ignored surrounding spaces; the browser now trims too, so both agree. A test was added.
+  - Django's password form autofocuses "Old password", which made the settings page jump to that box. Autofocus was removed and a test added.
+  - The delete button faded in over 0.15 s, which looked disabled in a screenshot; the danger button now changes instantly.
+  - The Cancel button wrapped under the delete button; the card was widened.
+- **Screenshots:** `evidence/post-profile-desktop.png`, `post-profile-phone.png`, `post-delete-ready.png`, `post-delete-wrong-password.png`, `post-delete-done.png`, `post-delete-phone.png`.

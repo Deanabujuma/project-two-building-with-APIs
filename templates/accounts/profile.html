@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Profile & Settings · HTTP.tv{% endblock %}
+{% block content %}
+<div class="page-top px-edge settings-page form-dark">
+  <header class="settings-head">
+    <span class="avatar avatar-lg">{{ user.username|first|upper }}</span>
+    <div>
+      <div class="label-caps mb-1">Profile & Settings</div>
+      <h1 class="page-title mb-0" data-username>{{ user.username }}</h1>
+      <div class="muted small">Member since {{ user.date_joined|date:"F j, Y" }}</div>
+    </div>
+  </header>
+
+  <div class="settings-grid">
+    <section class="tpanel" data-panel="account">
+      <h2 class="label-caps">Account</h2>
+      <dl class="settings-facts">
+        <dt>Username</dt><dd>{{ user.username }}</dd>
+        <dt>Member since</dt><dd>{{ user.date_joined|date:"M j, Y" }}</dd>
+        <dt>Last login</dt><dd>{{ user.last_login|date:"M j, Y, g:i a"|default:"—" }}</dd>
+        <dt>Shows saved</dt><dd>{{ total_saved }}</dd>
+        <dt>API token</dt><dd>{% if has_token %}Active{% else %}None{% endif %}</dd>
+      </dl>
+      <div class="status-counts">
+        {% for label, count in by_status %}<span class="chip"><span>{{ label }}</span><span class="n">{{ count }}</span></span>{% endfor %}
+      </div>
+    </section>
+
+    <section class="tpanel" data-panel="shortcuts">
+      <h2 class="label-caps">Shortcuts</h2>
+      <nav class="settings-links">
+        <a href="{% url 'shows:collection' %}"><i class="bi bi-collection"></i>My Collection<span>{{ total_saved }} show{{ total_saved|pluralize }}</span></a>
+        <a href="{% url 'shows:collection' %}?status=watching"><i class="bi bi-eye"></i>Watching</a>
+        <a href="{% url 'shows:discover' %}"><i class="bi bi-compass"></i>Discover</a>
+        <a href="{% url 'api-root' %}"><i class="bi bi-braces"></i>Browsable API<span>token for scripts: see README</span></a>
+      </nav>
+    </section>
+
+    <section class="tpanel" data-panel="username">
+      <h2 class="label-caps">Edit username</h2>
+      <form method="post" novalidate>
+        {% csrf_token %}<input type="hidden" name="form" value="username">
+        {% include "accounts/partials/field.html" with field=username_form.username %}
+        <button class="btn-pill btn-white" type="submit">Save username</button>
+      </form>
+    </section>
+
+    <section class="tpanel" data-panel="password">
+      <h2 class="label-caps">Change password</h2>
+      <form method="post" novalidate>
+        {% csrf_token %}<input type="hidden" name="form" value="password">
+        {% if password_form.non_field_errors %}<ul class="errorlist">{% for e in password_form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+        {% for field in password_form %}{% include "accounts/partials/field.html" %}{% endfor %}
+        <p class="dim small">Changing your password keeps you logged in here and revokes your API token, so scripts will need a new one.</p>
+        <button class="btn-pill btn-white" type="submit">Change password</button>
+      </form>
+    </section>
+
+    <section class="tpanel" data-panel="preferences">
+      <h2 class="label-caps">Preferences</h2>
+      <form method="post" novalidate>
+        {% csrf_token %}<input type="hidden" name="form" value="preferences">
+        {% for field in preferences_form %}{% include "accounts/partials/field.html" %}{% endfor %}
+        <button class="btn-pill btn-white" type="submit">Save preferences</button>
+      </form>
+    </section>
+
+    <section class="tpanel" data-panel="session">
+      <h2 class="label-caps">Session</h2>
+      <p class="muted">Log out of HTTP.tv on this device.</p>
+      <form method="post" action="{% url 'accounts:logout' %}">
+        {% csrf_token %}<button class="btn-pill btn-ghost" type="submit"><i class="bi bi-box-arrow-right"></i>Log out</button>
+      </form>
+    </section>
+  </div>
+
+  <section class="danger-zone" data-panel="danger">
+    <h2 class="label-caps danger-title">Danger Zone</h2>
+    <div class="danger-row">
+      <div>
+        <div class="fw-semibold">Delete your account</div>
+        <div class="muted small">Permanently removes your account and your collection, ratings, notes and progress. You'll be asked to confirm.</div>
+      </div>
+      <a class="btn-pill btn-danger-outline" href="{% url 'accounts:delete' %}">Delete Account</a>
+    </div>
+  </section>
+</div>
+{% endblock %}

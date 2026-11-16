@@ -14,4 +14,6 @@ urlpatterns = [
     ),
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),  # POST only (Django default)
     path("signup/", views.signup, name="signup"),
+    path("profile/", views.profile, name="profile"),
+    path("delete/", views.delete_account, name="delete"),
 ]

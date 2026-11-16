@@ -8,8 +8,10 @@ def nav_active(request):
     name = match.view_name if match else ""
     if name == "home":
         active = "home"
-    elif name == "shows:discover":
+    elif name in ("shows:discover", "shows:discover_browse", "shows:discover_genre"):
         active = "discover"
+    elif name in ("accounts:profile", "accounts:delete"):
+        active = "profile"
     elif name == "shows:collection":
         status = request.GET.get("status", "")
         active = {"watching": "watching", "completed": "completed"}.get(status, "collection")

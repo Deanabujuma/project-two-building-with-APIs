@@ -1,7 +1,7 @@
 <header class="topnav">
   {% if user.is_authenticated %}
     <div class="nav-inner px-edge" data-nav="private">
-      <a class="profile" href="{% url 'shows:collection' %}" aria-label="My collection">
+      <a class="profile {% if nav_active == 'profile' %}active{% endif %}" href="{% url 'accounts:profile' %}" aria-label="Profile and settings for {{ user.username }}" title="Profile & Settings">
         <span class="avatar">{{ user.username|first|upper }}</span><span class="uname">{{ user.username }}</span>
       </a>
       <nav class="mainnav" aria-label="Main">

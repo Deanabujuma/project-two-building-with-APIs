@@ -45,6 +45,55 @@ This addendum covers changes made **after** the Project #2 submission. The appro
 - login required;
 - no database writes.
 
-## Feature 2: Profile & Settings
+## Feature 2: Profile & Settings and Delete Account
 
-Added in Phase B (see below).
+**Problem:** the nav avatar only led to My Collection. Users had no way to change their username or password, set preferences, or delete their account.
+
+**Solution:** the nav username and avatar open `/accounts/profile/`. The page has these panels, top to bottom:
+- **Account:** username, member since, last login, number of shows saved, API token status, and counts by status.
+- **Shortcuts:** My Collection, Watching, Discover, and the browsable API.
+- **Edit username:** uniqueness ignores capital letters.
+- **Change password:** uses Django's `PasswordChangeForm`, which checks the old password and Django's password validators.
+- **Preferences.**
+- **Log out:** a POST form.
+- **Danger Zone:** links to Delete Account.
+
+**Database change** (migration `accounts/0002_profile_preferences`), two fields on `accounts.User`:
+- `schedule_country`: US, GB, CA, AU, IE or NZ; default US. Discover's Airing This Week uses it.
+- `default_collection_sort`: `-updated`, `title` or `-rating`; default `-updated`. My Collection uses it when the URL has no `sort`.
+
+Existing users get the defaults, so nothing changes for them until they choose.
+
+**Password change:**
+- `update_session_auth_hash` keeps the current browser logged in.
+- Other sessions are logged out (Django invalidates their session hash).
+- The user's API token is deleted, as approved, so a leaked token stops working. The message tells the user to get a new one.
+
+**Delete Account** (`/accounts/delete/`):
+- GET shows a separate confirmation page with the exact warning: "Are you sure you want to permanently delete your account? This action cannot be undone." It explains that the collection, ratings, notes, progress and API token are removed, and gives the number of shows.
+- The user must enter their current password and type `DELETE`. A small script enables the final button only when the password is filled in and the text is exactly `DELETE` (surrounding spaces ignored).
+- POST is CSRF-protected. The server checks the password and the word again; GET never deletes.
+- On success the server deletes `request.user` inside a transaction. The existing foreign keys do the rest: `CollectionEntry.user` and `Token.user` cascade, while `CollectionEntry.show` is `PROTECT` and `Show` has no user link, so shared Show rows and other users' accounts, entries and tokens are never touched.
+- The user is then logged out and redirected to the public home page with "Your account has been permanently deleted."
+- There is no undo or soft delete.
+
+**Acceptance criteria** (`accounts/tests/test_profile.py`):
+- the nav avatar links to the profile page;
+- anonymous GET and POST are sent to login;
+- all panels appear, with the Danger Zone last;
+- no autofocus jump;
+- username change, case-insensitive uniqueness, and invalid names;
+- an unknown form name cannot set other fields;
+- password change keeps the session, logs out other sessions and makes the old token return 401;
+- wrong old password, mismatched or too-short new passwords;
+- preferences are saved and validated;
+- the default sort is applied, and an explicit sort still wins;
+- the schedule country reaches Discover;
+- the confirmation page deletes nothing and its button starts disabled;
+- wrong or missing password, missing or lowercase `delete`;
+- GET with query parameters doesn't delete;
+- a missing CSRF token returns 403;
+- deletion removes only this user's entries and token, keeping all Show rows and the other user's data;
+- the user is logged out with the message;
+- the deleted user can't log in or use the API;
+- another user's password doesn't work.

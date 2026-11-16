@@ -277,9 +277,12 @@ def collection(request):
     status = request.GET.get("status", "")
     status = status if status in status_values else ""
     q = request.GET.get("q", "").strip()
-    sort = request.GET.get("sort", DEFAULT_SORT)
     sort_map = {key: ordering for key, _, ordering in WEB_SORTS}
-    sort = sort if sort in sort_map else DEFAULT_SORT
+    # The user's preferred order (Profile & Settings) is the default; it falls back to Recently updated.
+    default_sort = getattr(request.user, "default_collection_sort", "") or DEFAULT_SORT
+    default_sort = default_sort if default_sort in sort_map else DEFAULT_SORT
+    sort = request.GET.get("sort", default_sort)
+    sort = sort if sort in sort_map else default_sort
 
     entries = queries.collection_entries(request.user, status)
     if q:
@@ -293,7 +296,7 @@ def collection(request):
     def url_with(**changes):
         """This page's URL with some parameters changed; empty and default values are left out."""
         params = {"status": status, "q": q, "sort": sort, **changes}
-        if params["sort"] == DEFAULT_SORT:
+        if params["sort"] == default_sort:
             params["sort"] = ""
         query = urlencode({key: value for key, value in params.items() if value})
         return reverse("shows:collection") + (f"?{query}" if query else "")

@@ -233,6 +233,20 @@ The rows load right after the page appears, from `/discover/browse/`; without Ja
 a link opens them as a full page. If TVmaze is unavailable, a note appears and the local
 rows still show. Searching works exactly as before. Details are in `prd/httptv-post-submission.md`.
 
+### Profile & Settings (post-submission improvement)
+
+Click your username or avatar in the nav bar to open **Profile & Settings** (`/accounts/profile/`). There you can:
+
+- see your account details and collection counts;
+- change your username;
+- change your password. You stay logged in here, other browsers are logged out, and your API token is revoked, so get a new one for scripts;
+- choose your **schedule country** (Discover's Airing This Week) and your **default collection order** (used when My Collection's URL has no `sort`);
+- log out.
+
+**Delete Account** is at the bottom, in the Danger Zone. It opens a separate confirmation page. You must enter your current password and type `DELETE` before the button turns on, and the server checks both again. Deleting removes your account, your collection entries (with their ratings, notes and progress) and your API token. Shows other people have saved, and other users' data, are not affected. It cannot be undone.
+
+After pulling this branch, run `uv run python manage.py migrate` once: it adds the two preference fields.
+
 ### REST API
 
 All endpoints are under `/api/` and require authentication, **except** the token endpoint.
