@@ -183,6 +183,17 @@ Error: Could not connect to HTTP.tv at http://127.0.0.1:8999/api/. Is the server
 ```
 Afterwards, `update 2 --season 2 --episode 3` restored the sample entry.
 
+### R18 — The server's side of R17 (dev-server log, 2026-11-15)
+The Django dev server's request log at the moment R17 ran (copied from the server's console output):
+```
+[15/Nov/2026 17:29:25] "GET /api/collection/2/ HTTP/1.1" 200 1164       <- next 2: read the entry
+[15/Nov/2026 17:29:25] "PATCH /api/collection/2/ HTTP/1.1" 200 1164     <- next 2: send {"current_episode": 4}
+[15/Nov/2026 17:29:25] "PATCH /api/collection/2/ HTTP/1.1" 200 1164     <- update 2 --season 3
+Bad Request: /api/collection/2/
+[15/Nov/2026 17:29:26] "PATCH /api/collection/2/ HTTP/1.1" 400 67       <- update 2 --rating 9 (the 67-byte rating error)
+```
+`next` makes two requests (GET, then PATCH), and the rejected update reached the server and was refused there, not by the client.
+
 ---
 
 ## 3. Screenshots
