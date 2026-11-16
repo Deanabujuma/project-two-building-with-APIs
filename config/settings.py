@@ -140,6 +140,15 @@ MAILERS = {
 
 # Django REST Framework: every API endpoint requires a logged-in session or a token,
 # except the token endpoint itself (which is how a client logs in).
+# In-memory cache (one per server process, cleared on restart). Used for TVmaze schedule
+# data (1 hour) and backdrop lookups (7 days) on the Discover page; see shows/browse.py.
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "httptv",
+    }
+}
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.TokenAuthentication",

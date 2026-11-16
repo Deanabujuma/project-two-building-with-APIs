@@ -1,5 +1,7 @@
 """Business operations shared by the web pages and the REST API."""
 
+from collections import Counter
+
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 
@@ -64,3 +66,38 @@ def suggested_shows(tvmaze_id, genres, limit=20):
             scored.append((-shared, show.name.lower(), show))
     scored.sort(key=lambda item: item[:2])
     return [show for _, _, show in scored[:limit]]
+
+
+def _show_value(show, field):
+    return show.get(field) if isinstance(show, dict) else getattr(show, field, None)
+
+
+def recommended_for_user(user, extra_candidates=(), limit=20):
+    """Shows not in the user's collection that share genres with it (the same local genre match).
+
+    Candidates are shows stored on HTTP.tv plus `extra_candidates` (e.g. this week's TVmaze
+    schedule, as show dicts). Ranked by how many genres they share with the collection,
+    then by how many collection shows have those genres, then by name.
+    """
+    collection_genres = Counter()
+    saved_ids = set()
+    for entry in CollectionEntry.objects.filter(user=user).select_related("show"):
+        saved_ids.add(entry.show.tvmaze_id)
+        collection_genres.update(_genre_set(entry.show.genres))
+    if not collection_genres:
+        return []
+
+    candidates = {}
+    for show in list(Show.objects.exclude(tvmaze_id__in=saved_ids)) + list(extra_candidates):
+        tvmaze_id = _show_value(show, "tvmaze_id")
+        if tvmaze_id not in saved_ids and tvmaze_id not in candidates:
+            candidates[tvmaze_id] = show
+
+    scored = []
+    for show in candidates.values():
+        shared = _genre_set(_show_value(show, "genres")) & set(collection_genres)
+        if shared:
+            weight = sum(collection_genres[genre] for genre in shared)
+            scored.append(((-len(shared), -weight, _show_value(show, "name").lower()), show))
+    scored.sort(key=lambda item: item[0])
+    return [show for _, show in scored[:limit]]

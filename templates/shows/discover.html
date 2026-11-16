@@ -1,18 +1,19 @@
 {% extends "base.html" %}
 {% block title %}{% if query %}{{ query }} · {% endif %}Discover · HTTP.tv{% endblock %}
 {% block content %}
-<div class="page-top px-edge">
+<div class="page-top px-edge discover-page">
   <h1 class="page-title mb-3">Discover</h1>
-  <form class="big-search mb-4" method="get" action="{% url 'shows:discover' %}" role="search">
+  <form class="big-search discover-search mb-4" method="get" action="{% url 'shows:discover' %}" role="search">
     <i class="bi bi-search"></i>
-    <input class="form-control" name="q" type="search" placeholder="Search TVmaze for a TV show" value="{{ query }}" aria-label="Search TVmaze" autocomplete="off" {% if not query %}autofocus{% endif %}>
+    <input class="form-control" name="q" type="search" placeholder="Search TVmaze for a TV show" value="{{ query }}" aria-label="Search TVmaze" autocomplete="off" {% if not query and not rows_inline %}autofocus{% endif %}>
   </form>
 
   {% if error %}
     <div class="empty-state" data-state="error"><i class="bi bi-exclamation-triangle"></i>
       <h2 class="h5 mt-3">Search unavailable</h2><p class="muted">{{ error }}</p></div>
   {% elif blank_query %}
-    <div class="muted" data-state="blank">Type a show name to search TVmaze (for example: Severance, Abbott Elementary, The Office).</div>
+    <div class="muted mb-4" data-state="blank">Type a show name to search TVmaze (for example: Severance, Abbott Elementary, The Office).</div>
+    {% include "shows/partials/discover_slot.html" %}
   {% elif query %}
     {% if results %}
       <div class="muted mb-3">{{ results|length }} result{{ results|length|pluralize }} for “{{ query }}”</div>
@@ -38,7 +39,28 @@
         <h2 class="h5 mt-3">No shows found for “{{ query }}”</h2><p class="muted">Check the spelling or try a shorter title.</p></div>
     {% endif %}
   {% else %}
-    <div class="muted" data-state="start">Search TVmaze's catalog of TV shows, then save the ones you want to track.</div>
+    <div data-state="start">{% include "shows/partials/discover_slot.html" %}</div>
   {% endif %}
 </div>
+{% endblock %}
+{% block scripts %}
+{% include "includes/rail_script.html" %}
+{% if not query %}
+<script>
+  // Load the browsing rows right after the page appears (they come from TVmaze's schedule,
+  // which can take a few seconds the first time; the search box is usable immediately).
+  document.querySelectorAll("[data-browse-slot]").forEach(function (slot) {
+    fetch(slot.dataset.src, { credentials: "same-origin" })
+      .then(function (response) {
+        if (response.redirected) { window.location.reload(); return Promise.reject(); }
+        return response.ok ? response.text() : Promise.reject();
+      })
+      .then(function (html) { slot.innerHTML = html; })
+      .catch(function () {
+        slot.innerHTML = '<div class="row-note" data-state="browse-error"><i class="bi bi-exclamation-triangle"></i>' +
+          'The browsing rows couldn’t load. <a href="' + slot.dataset.page + '">Try again</a>.</div>';
+      });
+  });
+</script>
+{% endif %}
 {% endblock %}

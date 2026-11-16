@@ -1,0 +1,60 @@
+{# Discover's browsing rows (shown before searching). Loaded by the Discover page's script. #}
+<div class="browse-rows" data-browse="rows">
+  {% if schedule_error %}
+    <div class="row-note" data-state="schedule-error"><i class="bi bi-exclamation-triangle"></i>Some TVmaze schedule data couldn't be loaded. {{ schedule_error }}</div>
+  {% endif %}
+
+  {% if featured %}
+    <section class="rail-section" data-row="featured">
+      <h2 class="rail-title">Featured Shows<small>Highest TVmaze ratings among shows with new episodes this week</small></h2>
+      <div class="rail-wrap">
+        <button class="rail-btn prev" type="button" data-scroll="-1" aria-label="Scroll left">‹</button>
+        <div class="rail">{% for card in featured %}{% include "includes/wide_card.html" with show=card.show entry=card.entry kind="featured" feature=True %}{% endfor %}</div>
+        <button class="rail-btn next" type="button" data-scroll="1" aria-label="Scroll right">›</button>
+      </div>
+    </section>
+  {% endif %}
+
+  {% if genres %}
+    <section class="rail-section" data-row="genres">
+      <h2 class="rail-title">Browse by Genre<small>Genres of shows airing this week and shows saved on HTTP.tv</small></h2>
+      <div class="rail-wrap">
+        <button class="rail-btn prev" type="button" data-scroll="-1" aria-label="Scroll left">‹</button>
+        <div class="rail genre-rail">
+        {% for name, count in genres %}
+          <a class="genre-tile {% cycle 'g0' 'g1' 'g2' 'g3' 'g4' 'g5' %}" href="{% url 'shows:discover_genre' name %}" data-genre="{{ name }}">
+            <span class="gname">{{ name }}</span><span class="gcount">{{ count }} show{{ count|pluralize }}</span>
+          </a>
+        {% endfor %}
+        </div>
+        <button class="rail-btn next" type="button" data-scroll="1" aria-label="Scroll right">›</button>
+      </div>
+    </section>
+  {% endif %}
+
+  {% if airing %}
+    <section class="rail-section" data-row="airing">
+      <h2 class="rail-title">Airing This Week<small>New episodes on {{ schedule_country }} TV networks and on streaming services, today and the next 6 days · each day's highest TVmaze-rated first</small></h2>
+      <div class="rail-wrap">
+        <button class="rail-btn prev" type="button" data-scroll="-1" aria-label="Scroll left">‹</button>
+        <div class="rail">{% for card in airing %}{% include "includes/wide_card.html" with show=card.show entry=card.entry kind="airing" %}{% endfor %}</div>
+        <button class="rail-btn next" type="button" data-scroll="1" aria-label="Scroll right">›</button>
+      </div>
+    </section>
+  {% endif %}
+
+  <section class="rail-section" data-row="recommended">
+    <h2 class="rail-title">Recommended From My Collection<small>Shares genres with shows you've saved · not a TVmaze recommendation</small></h2>
+    {% if recommended %}
+      <div class="rail-wrap">
+        <button class="rail-btn prev" type="button" data-scroll="-1" aria-label="Scroll left">‹</button>
+        <div class="rail">{% for card in recommended %}{% include "includes/wide_card.html" with show=card.show entry=card.entry kind="recommended" %}{% endfor %}</div>
+        <button class="rail-btn next" type="button" data-scroll="1" aria-label="Scroll right">›</button>
+      </div>
+    {% elif has_collection %}
+      <p class="muted" data-state="no-recommendations">No other shows share genres with your collection yet. Search above to find more.</p>
+    {% else %}
+      <p class="muted" data-state="recommend-empty">Save a few shows and recommendations based on their genres will appear here.</p>
+    {% endif %}
+  </section>
+</div>

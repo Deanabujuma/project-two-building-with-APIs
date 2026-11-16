@@ -217,6 +217,22 @@ rows of their own shows: **Continue Tracking**, **My Watchlist**, **Recently Add
 saves of any status) and **Completed Shows**. Empty rows are hidden. With an empty collection,
 the page shows a welcome hero with a **Discover shows** button.
 
+### Discover browsing (post-submission improvement)
+
+Before you search, Discover shows rows of wide cards built from real TVmaze data:
+
+- **Featured Shows:** the 10 highest TVmaze-rated shows with new episodes this week.
+- **Browse by Genre:** genre tiles with counts. Each opens a genre page (`/discover/genre/Comedy/`) listing that genre's shows airing this week, plus shows saved on HTTP.tv.
+- **Airing This Week:** today plus the next 6 days of TVmaze's TV schedule for your schedule country (US by default) and its streaming schedule.
+- **Recommended From My Collection:** shows that share genres with the shows you've saved. This uses the same local genre match as the Suggested tab, not a TVmaze recommendation.
+
+Every card opens the show's page. Cards use the show's real backdrop when one is known;
+otherwise they use the poster on a blurred background. TVmaze schedule responses are cached
+in memory for 1 hour and backdrop lookups for 7 days, so repeat visits make no TVmaze calls.
+The rows load right after the page appears, from `/discover/browse/`; without JavaScript,
+a link opens them as a full page. If TVmaze is unavailable, a note appears and the local
+rows still show. Searching works exactly as before. Details are in `prd/httptv-post-submission.md`.
+
 ### REST API
 
 All endpoints are under `/api/` and require authentication, **except** the token endpoint.

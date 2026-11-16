@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}{{ genre }} · Discover · HTTP.tv{% endblock %}
+{% block content %}
+<div class="page-top px-edge discover-page" data-genre-page="{{ genre }}">
+  <a class="back-link" href="{% url 'shows:discover' %}"><i class="bi bi-arrow-left"></i>Discover</a>
+  <h1 class="page-title mt-2 mb-1">{{ genre }}</h1>
+  <p class="muted mb-4">TVmaze can't list every show by genre, so this page shows {{ genre }} shows from this week's TVmaze schedule and shows saved on HTTP.tv.</p>
+
+  {% if schedule_error %}
+    <div class="row-note" data-state="schedule-error"><i class="bi bi-exclamation-triangle"></i>Some TVmaze schedule data couldn't be loaded. {{ schedule_error }}</div>
+  {% endif %}
+
+  {% if airing %}
+    <section class="mb-5" data-section="airing">
+      <h2 class="rail-title">Airing this week<small>{{ airing|length }} show{{ airing|length|pluralize }}</small></h2>
+      <div class="wide-grid">{% for card in airing %}{% include "includes/wide_card.html" with show=card.show entry=card.entry kind="airing" %}{% endfor %}</div>
+    </section>
+  {% endif %}
+
+  {% if stored %}
+    <section class="mb-5" data-section="stored">
+      <h2 class="rail-title">Saved on HTTP.tv<small>Not airing this week</small></h2>
+      <div class="wide-grid">{% for card in stored %}{% include "includes/wide_card.html" with show=card.show entry=card.entry %}{% endfor %}</div>
+    </section>
+  {% endif %}
+
+  {% if not airing and not stored %}
+    <div class="empty-state" data-state="genre-empty"><i class="bi bi-collection-play"></i>
+      <h2 class="h5 mt-3">No {{ genre }} shows found</h2>
+      <p class="muted">Nothing in this genre is airing this week or saved on HTTP.tv. Try searching instead.</p>
+      <a class="btn-pill btn-white" href="{% url 'shows:discover' %}">Back to Discover</a></div>
+  {% endif %}
+</div>
+{% endblock %}

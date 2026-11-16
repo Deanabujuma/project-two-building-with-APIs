@@ -10,7 +10,7 @@ from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
-from . import queries, services, tvmaze
+from . import browse, queries, services, tvmaze
 from .forms import TrackingForm
 from .models import CollectionEntry, Show
 
@@ -67,6 +67,57 @@ def discover(request):
             saved = saved_entries_by_tvmaze_id(request.user, [show["tvmaze_id"] for show in shows])
             context["results"] = [{"show": show, "entry": saved.get(show["tvmaze_id"])} for show in shows]
     return render(request, "shows/discover.html", context)
+
+
+def _schedule_country(user):
+    return getattr(user, "schedule_country", "") or browse.DEFAULT_COUNTRY
+
+
+def _cards(user, shows):
+    """Pair each show (dict or Show) with the user's entry for it, if saved."""
+    ids = [show["tvmaze_id"] if isinstance(show, dict) else show.tvmaze_id for show in shows]
+    saved = saved_entries_by_tvmaze_id(user, ids)
+    return [{"show": show, "entry": saved.get(tvmaze_id)} for show, tvmaze_id in zip(shows, ids)]
+
+
+def discover_rows_context(user):
+    """The Discover browsing rows. TVmaze problems are reported per row; local rows still render."""
+    week, error = browse.week_schedule(_schedule_country(user))
+    return {
+        "featured": _cards(user, browse.featured(week)),
+        "airing": _cards(user, browse.airing_this_week(week)),
+        "genres": browse.genre_counts(week),
+        "recommended": _cards(user, browse.with_local_backdrops(
+            [dict(s) if isinstance(s, dict) else s for s in services.recommended_for_user(user, week)])),
+        "has_collection": CollectionEntry.objects.filter(user=user).exists(),
+        "schedule_error": error,
+        "schedule_country": _schedule_country(user),
+    }
+
+
+@login_required
+def discover_browse(request):
+    """Discover's browsing rows. Fetched by the Discover page's script (?partial=1),
+    or opened directly as a full page when JavaScript is off."""
+    context = discover_rows_context(request.user)
+    if request.GET.get("partial") == "1":
+        return render(request, "shows/partials/discover_rows.html", context)
+    context.update(query="", results=[], error="", blank_query=False, rows_inline=True)
+    return render(request, "shows/discover.html", context)
+
+
+@login_required
+def discover_genre(request, genre):
+    """Shows in one genre: this week's TVmaze schedule plus shows stored on HTTP.tv."""
+    week, error = browse.week_schedule(_schedule_country(request.user))
+    airing, stored = browse.shows_in_genre(genre, week)
+    known = {name.lower(): name for name, _ in browse.genre_counts(week)}
+    return render(request, "shows/discover_genre.html", {
+        "genre": known.get(genre.strip().lower(), genre.strip()),
+        "airing": _cards(request.user, airing),
+        "stored": _cards(request.user, stored),
+        "schedule_error": error,
+    })
 
 
 def _safe_next(request, fallback):

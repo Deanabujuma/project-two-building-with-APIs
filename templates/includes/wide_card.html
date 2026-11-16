@@ -1,0 +1,30 @@
+{% load show_display %}{# Wide 16:9 card for Discover. Context: show (dict or Show), entry, kind ("featured", "airing", "recommended" or ""), feature (bool). #}
+<a class="tile tile-wide {% if feature %}tile-feature{% endif %}" href="{% url 'shows:detail' show.tvmaze_id %}" data-tile="{{ show.tvmaze_id }}" data-art="{% if show.background_url %}backdrop{% elif show.image_url %}poster-fallback{% else %}initial{% endif %}">
+  <div class="art">
+    {% if show.background_url %}
+      <img src="{{ show.background_url }}" alt="" loading="lazy">
+    {% elif show.image_url %}
+      <div class="wide-fallback">
+        <div class="wf-blur" style="background-image:url('{{ show.image_url }}')"></div>
+        <img class="wf-poster" src="{{ show.image_url }}" alt="{{ show.name }} poster" loading="lazy">
+        <div class="wf-title clamp-2">{{ show.name }}</div>
+      </div>
+    {% else %}
+      <div class="fallback-art">{{ show.name|initial }}</div>
+    {% endif %}
+    {% if entry %}<span class="tile-flag" title="In your collection"><i class="bi bi-check-lg"></i></span>{% endif %}
+  </div>
+  <div class="cap-t clamp-1">{{ show.name }}</div>
+  {% if kind == "featured" %}
+    <div class="cap-s"><i class="bi bi-star-fill"></i>{{ show.tvmaze_rating|tvmaze_rating_text }} on TVmaze{% if show.genres %} · {{ show.genres }}{% endif %}</div>
+  {% elif kind == "airing" %}
+    <div class="cap-s"><i class="bi bi-calendar-event"></i>{{ show.airs_label }}{% if show.airtime %} · {{ show.airtime }}{% endif %}{% if show.episode_label %} · {{ show.episode_label }}{% endif %}</div>
+  {% elif kind == "recommended" %}
+    <div class="cap-s"><i class="bi bi-tags"></i>{{ show.genres }}</div>
+  {% endif %}
+  {% if entry %}
+    <div class="cap-p started"><span class="sdot st-{{ entry.status }}"></span>{{ entry.get_status_display }} · {{ entry.progress_text }}</div>
+  {% else %}
+    <div class="cap-p">{{ show|identity_line }}</div>
+  {% endif %}
+</a>

@@ -212,3 +212,51 @@ def get_show_and_extras(tvmaze_id):
     """Fetch show details, seasons and cast in a single request (unsaved show on Extras)."""
     raw = _fetch_show(tvmaze_id, ["images", "seasons", "cast"])
     return map_show(raw), map_extras(raw)
+
+
+# --- Schedules and images (Discover browsing) --------------------------------------------------
+
+def _schedule_items(data, show_key):
+    """Map schedule entries to {"show", "airtime", "season", "number"}. Malformed entries are skipped."""
+    if not isinstance(data, list):
+        raise _unreadable()
+    items = []
+    for entry in data:
+        if not isinstance(entry, dict):
+            continue
+        raw = entry.get("show") if show_key == "show" else (entry.get("_embedded") or {}).get("show")
+        try:
+            show = map_show(raw)
+        except TVmazeError:
+            continue
+        country = ""
+        for key in ("network", "webChannel"):
+            channel = (raw or {}).get(key)
+            if isinstance(channel, dict) and channel.get("name"):
+                country = ((channel.get("country") or {}).get("code") or "")
+                break
+        items.append({"show": show, "channel_country_code": country, "airtime": entry.get("airtime") or "",
+                      "season": entry.get("season"), "number": entry.get("number")})
+    return items
+
+
+def get_schedule(date, country):
+    """TV-network episodes airing on `date` (YYYY-MM-DD) in `country` (ISO code), one request."""
+    return _schedule_items(_get("/schedule", {"country": country, "date": date}), "show")
+
+
+def get_web_schedule(date):
+    """Streaming (web channel) episodes released on `date`, worldwide, one request.
+
+    TVmaze's country filter drops global streamers whose channel has no country, so the
+    caller filters by country instead (see shows.browse).
+    """
+    return _schedule_items(_get("/schedule/web", {"date": date}), "_embedded")
+
+
+def get_backdrop(tvmaze_id):
+    """The show's backdrop URL by the usual rule (widest background >= 1920 px), or "". One request."""
+    images = _get(f"/shows/{int(tvmaze_id)}/images")
+    if not isinstance(images, list):
+        raise _unreadable()
+    return pick_backdrop(images)

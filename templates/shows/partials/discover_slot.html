@@ -1,0 +1,11 @@
+{# Where Discover's browsing rows go: inline (no-JavaScript page) or loaded by the page's script. #}
+{% if rows_inline %}
+  {% include "shows/partials/discover_rows.html" %}
+{% else %}
+  <div class="browse-slot" data-browse-slot data-src="{% url 'shows:discover_browse' %}?partial=1" data-page="{% url 'shows:discover_browse' %}" aria-busy="true">
+    <section class="rail-section skeleton-section"><h2 class="rail-title">Featured Shows</h2><div class="skeleton-row">{% for i in "12345" %}<div class="skeleton-card feature"></div>{% endfor %}</div></section>
+    <section class="rail-section skeleton-section"><h2 class="rail-title">Browse by Genre</h2><div class="skeleton-row">{% for i in "123456" %}<div class="skeleton-card genre"></div>{% endfor %}</div></section>
+    <section class="rail-section skeleton-section"><h2 class="rail-title">Airing This Week</h2><div class="skeleton-row">{% for i in "123456" %}<div class="skeleton-card"></div>{% endfor %}</div></section>
+    <noscript><p class="muted"><a href="{% url 'shows:discover_browse' %}">Show featured shows, genres and this week's schedule</a></p></noscript>
+  </div>
+{% endif %}

@@ -435,3 +435,33 @@ Every one of the 57 criteria in `prd/httptv.md` (AC1–AC54, with AC5a, AC5b and
 | API | (no prototype) | `app-p9-api-root.png`, `app-p11-api-browsable-filters.png` |
 
 All files are in `docs/evidence/`.
+
+---
+
+## 6. Post-submission improvements (after the `project2-submission` tag)
+
+These entries are for work on the `post-submission-improvements` branch. Sections 1–5
+describe the submitted project.
+
+### P1 — Discover browsing rows (2026-11-15, Phase A)
+- **Live TVmaze probes before designing** (one request each):
+  - `/schedule?country=US` (today) returned 57 episodes from 56 shows (131 KB). Only 28 of those shows had genres and 27 had a rating. Every show had a portrait poster and none had a landscape image.
+  - `/schedule/web?country=US` returned 4 items, while `/schedule/web` without a country returned 76. Global streamers have no country, so the app filters by country itself.
+  - Web schedule entries put the show under `_embedded.show`; network entries put it under `show`.
+- **Constraint found in the existing tests:** `test_first_visit_makes_no_tvmaze_call` and the AC8 blank-search test require `/discover/` itself to make no TVmaze calls. Rather than edit them, the rows load from `/discover/browse/?partial=1`; all 485 original tests pass unchanged.
+- **Tests:** `shows/tests/test_discover_browse.py` (34 tests, using a URL-routing fake TVmaze). `uv run pytest -q` → `519 passed`.
+- **Test mistakes I made (the code was right):**
+  - a test looked for `data-browse-slot` anywhere in the page and found it inside the script text;
+  - an "escaping" test used the genre `<b>x</b>`, whose `/` splits the URL, so the page was a correct 404.
+- **Found in the live browser check and fixed:**
+  - Browse by Genre listed 33 real genres in five rows (a very long column on a phone). It's now a two-row strip that scrolls sideways.
+  - Airing This Week opened with obscure foreign streaming titles, because entries without an air time sorted first. Each day is now ordered by TVmaze rating (unrated last), and the row says so. A test was added.
+  - On phones, row subtitles squeezed beside the titles; they now wrap underneath.
+- **Live result (demo_user):**
+  - Featured: Dexter: Resurrection 8.4, Gold Rush 8.1, MobLand 8.1, …, with real backdrops (some have the title printed in the artwork, the known limitation from B1);
+  - the genre tiles start Drama 94, Comedy 60, Crime 47;
+  - Airing This Week starts The Simpsons (Today · 20:30 · S38 E7), Last Week Tonight, The Gilded Age;
+  - Recommended starts Elsbeth, Furia, The Lowdown, Tulsa King;
+  - `/discover/genre/Comedy/` lists 54 shows airing this week;
+  - no horizontal overflow at 1440 px or 390 px.
+- **Screenshots:** `evidence/post-discover-desktop.png`, `post-discover-desktop-full.png`, `post-discover-phone.png`, `post-discover-genre.png`, `post-discover-genre-phone.png`.
